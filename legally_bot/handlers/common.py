@@ -1,4 +1,4 @@
-from aiogram import Router, types, F
+from aiogram import Router, types, F, Bot
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from legally_bot.database.users_repo import UserRepository
@@ -7,10 +7,54 @@ from legally_bot.services.access_control import AccessControl
 import logging
 
 from legally_bot.services.i18n import I18n
-from legally_bot.keyboards.keyboards import get_main_menu, language_selection_kb
+from legally_bot.keyboards.keyboards import get_main_menu, language_selection_kb, role_selection_kb
 from legally_bot.states.states import RegistrationState
+import logging
+
+from legally_bot.services.i18n import I18n
+from legally_bot.config import settings
 
 router = Router()
+
+@router.message(Command("request_role"))
+async def cmd_request_role(message: types.Message):
+    user = await UserRepository.get_user(message.from_user.id)
+    if not user:
+        return # User not registered
+    
+    lang = user.get("language", "ru")
+    actual_role = user.get("actual_role", "guest")
+    requested_role = user.get("requested_role")
+
+    if requested_role and requested_role != actual_role:
+        return await message.answer(I18n.t("already_requested", lang, role=requested_role))
+    
+    await message.answer(I18n.t("request_role_prompt", lang), reply_markup=role_selection_kb(prefix="req_"))
+
+@router.callback_query(F.data.startswith("req_"))
+async def process_role_request(callback: types.CallbackQuery, bot: Bot):
+    role = callback.data.split("_")[1]
+    user = await UserRepository.get_user(callback.from_user.id)
+    lang = user.get("language", "ru") if user else "ru"
+    
+    await UserRepository.set_requested_role(callback.from_user.id, role)
+    
+    await callback.message.edit_text(I18n.t("role_request_sent", lang, role=role), parse_mode="Markdown")
+    
+    # Notify Admin
+    for admin_id in settings.admin_ids_list:
+        try:
+            from legally_bot.keyboards.keyboards import admin_request_kb
+            await bot.send_message(
+                admin_id,
+                f"🔔 **New Role Request**\nUser: {user['full_name']} (@{callback.from_user.username})\nID: `{callback.from_user.id}`\nRequested: **{role}**",
+                reply_markup=admin_request_kb(callback.from_user.id, role),
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            logging.error(f"Failed to notify admin {admin_id}: {e}")
+            
+    await callback.answer()
 
 @router.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
@@ -36,6 +80,30 @@ async def process_language(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(RegistrationState.waiting_for_name)
     await callback.answer()
 
+@router.message(F.text.in_(["👤 Profile", "👤 Профиль"]))
+async def cmd_profile(message: types.Message):
+    user = await UserRepository.get_user(message.from_user.id)
+    if not user:
+        return
+    
+    lang = user.get("language", "ru")
+    role = user.get("actual_role", "guest")
+    req_role = user.get("requested_role", "none")
+    
+    status_text = f"**{role}**"
+    if req_role != role:
+        status_text += f" (Requested: {req_role})"
+
+    profile_text = (
+        f"👤 **{I18n.t('profile', lang)}**\n"
+        f"━━━━━━━━━━━━━━\n"
+        f"📛 Name: {user['full_name']}\n"
+        f"📧 Email: {user['email']}\n"
+        f"🎭 Role: {status_text}\n"
+        f"📊 Solved: {user.get('cases_solved_count', 0)}\n"
+    )
+    await message.answer(profile_text, parse_mode="Markdown")
+
 @router.message(Command("help"))
 async def cmd_help(message: types.Message):
     logging.info(f"User {message.from_user.id} called /help")
@@ -55,6 +123,7 @@ async def cmd_help(message: types.Message):
                 "**Общая навигация:**\n"
                 "• `/start` - Вернуться в главное меню в любое время.\n"
                 "• `/help` - Просмотреть это руководство.\n"
+                "• `/request_role` - Запросить новую роль (Студент/Профессор).\n"
                 "• `👤 Профиль` - Проверить ваш статус и статистику.\n\n"
                 "**Руководство для вашей роли:**\n"
             ),
@@ -108,6 +177,7 @@ async def cmd_help(message: types.Message):
                 "**General Navigation:**\n"
                 "• `/start` - Return to the main menu at any time.\n"
                 "• `/help` - View this instruction manual.\n"
+                "• `/request_role` - Request a new role (Student/Professor).\n"
                 "• `👤 Profile` - Check your status and stats.\n\n"
                 "**Your Role-Specific Guide:**\n"
             ),

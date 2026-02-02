@@ -1,4 +1,4 @@
-from aiogram import Router, types, F
+from aiogram import Router, types, F, Bot
 from aiogram.filters import Command
 from legally_bot.services.access_control import AccessControl
 from legally_bot.database.users_repo import UserRepository
@@ -31,6 +31,39 @@ async def admin_panel(message: types.Message):
     hint = "\nTo approve, use: `/promote <id> <role>`" if lang == "en" else "\nДля одобрения используйте: `/promote <id> <role>`"
     text += hint
     await message.answer(text, parse_mode="Markdown")
+
+@router.callback_query(F.data.startswith("adm_"))
+async def process_admin_role_callback(callback: types.CallbackQuery, bot: Bot):
+    if not await AccessControl.is_admin(callback.from_user.id):
+        return await callback.answer("Access denied.")
+    
+    # adm_appr_{user_id}_{role} or adm_reje_{user_id}_{role}
+    parts = callback.data.split("_")
+    action = parts[1]
+    target_id = int(parts[2])
+    role = parts[3]
+    
+    user = await UserRepository.get_user(target_id)
+    lang = user.get("language", "ru") if user else "ru"
+
+    if action == "appr":
+        await UserRepository.update_role(target_id, role)
+        # Clear requested role once approved
+        await UserRepository.set_requested_role(target_id, role)
+        await callback.message.edit_text(callback.message.md_text + f"\n\n✅ **Approved as {role}**")
+        try:
+            await bot.send_message(target_id, I18n.t("role_approved", lang, role=role))
+        except: pass
+    else:
+        # Reset requested role on rejection
+        actual_role = user.get("actual_role", "guest")
+        await UserRepository.set_requested_role(target_id, actual_role)
+        await callback.message.edit_text(callback.message.md_text + f"\n\n❌ **Rejected**")
+        try:
+            await bot.send_message(target_id, I18n.t("role_rejected", lang, role=role))
+        except: pass
+        
+    await callback.answer()
 
 @router.message(Command("promote"))
 async def promote_user(message: types.Message):

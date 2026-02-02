@@ -44,12 +44,19 @@ class UserRepository:
     
     @classmethod
     async def get_pending_role_requests(cls):
-        # Users who have a requested_role different from their actual_role (and actual is still 'user')
+        # Users who have a requested_role different from their actual_role
+        # AND it's not "user" (default) or "none"
         cursor = db.get_db()[cls.collection].find({
-            "requested_role": {"$ne": "user"},
-            "actual_role": "user"
+            "$expr": {"$ne": ["$requested_role", "$actual_role"]}
         })
         return await cursor.to_list(length=100)
+
+    @classmethod
+    async def set_requested_role(cls, telegram_id: int, role: str):
+        await db.get_db()[cls.collection].update_one(
+            {"telegram_id": telegram_id},
+            {"$set": {"requested_role": role}}
+        )
 
     @classmethod
     async def increment_cases_solved(cls, telegram_id: int):

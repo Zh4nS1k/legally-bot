@@ -29,10 +29,17 @@ def language_selection_kb():
     builder.adjust(2)
     return builder.as_markup()
 
-def role_selection_kb():
+def role_selection_kb(prefix: str = "role_"):
     builder = InlineKeyboardBuilder()
-    builder.button(text="Student", callback_data="role_student")
-    builder.button(text="Professor", callback_data="role_professor")
+    builder.button(text="Student", callback_data=f"{prefix}student")
+    builder.button(text="Professor", callback_data=f"{prefix}professor")
+    builder.adjust(2)
+    return builder.as_markup()
+
+def admin_request_kb(user_id: int, requested_role: str):
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Approve", callback_data=f"adm_appr_{user_id}_{requested_role}")
+    builder.button(text="❌ Reject", callback_data=f"adm_reje_{user_id}_{requested_role}")
     builder.adjust(2)
     return builder.as_markup()
 

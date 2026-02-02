@@ -25,6 +25,11 @@ class I18n:
             "no_access": "У вас нет доступа.",
             "language_selected": "Язык установлен: Русский",
             "select_language": "Пожалуйста, выберите язык / Please select a language:",
+            "role_request_sent": "✅ Ваш запрос на роль **{role}** отправлен администратору.",
+            "request_role_prompt": "Выберите роль, которую хотите запросить:",
+            "already_requested": "У вас уже есть ожидающий запрос на роль **{role}**.",
+            "role_approved": "🎉 Ваша роль **{role}** была одобрена!",
+            "role_rejected": "❌ Ваш запрос на роль **{role}** был отклонен.",
         },
         "en": {
             "welcome": "Welcome to Legally! Let's get you registered.\nPlease enter your **Full Name**:",
@@ -50,6 +55,11 @@ class I18n:
             "no_access": "You do not have access.",
             "language_selected": "Language set: English",
             "select_language": "Please select a language / Пожалуйста, выберите язык:",
+            "role_request_sent": "✅ Your request for the **{role}** role has been sent to the admin.",
+            "request_role_prompt": "Select the role you want to request:",
+            "already_requested": "You already have a pending request for the **{role}** role.",
+            "role_approved": "🎉 Your role **{role}** has been approved!",
+            "role_rejected": "❌ Your request for the **{role}** role has been rejected.",
         }
     }
 
