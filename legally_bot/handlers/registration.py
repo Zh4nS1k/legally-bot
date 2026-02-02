@@ -27,34 +27,22 @@ async def process_email(message: types.Message, state: FSMContext):
     await state.update_data(email=message.text)
     data = await state.get_data()
     lang = data.get("language", "ru")
-    await message.answer(I18n.t("select_role", lang), reply_markup=role_selection_kb())
-    await state.set_state(RegistrationState.waiting_for_role)
-
-@router.callback_query(RegistrationState.waiting_for_role, F.data.startswith("role_"))
-async def process_role(callback: types.CallbackQuery, state: FSMContext):
-    role = callback.data.split("_")[1]
-    logging.info(f"User {callback.from_user.id} selected role: {role}")
-    data = await state.get_data()
-    lang = data.get("language", "ru")
+    
+    role = "guest"
     
     await UserRepository.create_user(
-        telegram_id=callback.from_user.id,
+        telegram_id=message.from_user.id,
         full_name=data['full_name'],
         email=data['email'],
         role=role,
         language=lang
     )
     
-    # We could translate these too, but for brevity I'll use a translated wrapper
-    await callback.message.edit_text(
+    await message.answer(
         I18n.t("reg_received", lang, role=role) + "\n\n" + I18n.t("guest_info", lang),
+        reply_markup=get_main_menu("guest", lang),
         parse_mode="Markdown"
     )
     
-    # Mock Admin Notification
-    logging.info(f"🔔 [ADMIN NOTIFICATION] User {callback.from_user.id} ({data['full_name']}) requested role: {role}")
-    
-    # Refresh menu
-    await callback.message.answer(I18n.t("main_menu", lang), reply_markup=get_main_menu("guest", lang))
+    logging.info(f"User {message.from_user.id} registered as {role}")
     await state.clear()
-    await callback.answer()
