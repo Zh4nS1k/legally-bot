@@ -1,7 +1,7 @@
 from aiogram import Router, types, F, Bot
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from legally_bot.database.users_repo import UserRepository
+from legally_bot.database.users_repo import UsersRepository
 from legally_bot.keyboards.keyboards import get_main_menu
 from legally_bot.services.access_control import AccessControl
 import logging
@@ -18,7 +18,7 @@ router = Router()
 
 @router.message(Command("request_role"))
 async def cmd_request_role(message: types.Message):
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     if not user:
         return # User not registered
     
@@ -34,10 +34,10 @@ async def cmd_request_role(message: types.Message):
 @router.callback_query(F.data.startswith("req_"))
 async def process_role_request(callback: types.CallbackQuery, bot: Bot):
     role = callback.data.split("_")[1]
-    user = await UserRepository.get_user(callback.from_user.id)
+    user = await UsersRepository.get_user(callback.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     
-    await UserRepository.set_requested_role(callback.from_user.id, role)
+    await UsersRepository.set_requested_role(callback.from_user.id, role)
     
     await callback.message.edit_text(I18n.t("role_request_sent", lang, role=role), parse_mode="Markdown")
     
@@ -60,7 +60,7 @@ async def process_role_request(callback: types.CallbackQuery, bot: Bot):
 async def cmd_start(message: types.Message, state: FSMContext):
     await state.clear()
     logging.info(f"User {message.from_user.id} called /start")
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     if not user:
         await message.answer(I18n.t("select_language"), reply_markup=language_selection_kb())
         await state.set_state(RegistrationState.waiting_for_language)
@@ -92,13 +92,13 @@ async def cmd_help_btn(message: types.Message):
 @router.message(Command("help"))
 async def cmd_help(message: types.Message):
     logging.info(f"User {message.from_user.id} called /help")
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     
     await message.answer(I18n.t("help_text", lang), parse_mode="Markdown")
 
 async def cmd_profile(message: types.Message):
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     if not user:
         return
     
@@ -123,7 +123,7 @@ async def cmd_profile(message: types.Message):
 @router.message(Command("help"))
 async def cmd_help(message: types.Message):
     logging.info(f"User {message.from_user.id} called /help")
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     role = "guest"
     lang = "ru"
     if user:
@@ -257,7 +257,7 @@ async def cmd_help_btn(message: types.Message):
 @router.message(Command("help"))
 async def cmd_help(message: types.Message):
     logging.info(f"User {message.from_user.id} called /help")
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     
     try:
@@ -270,7 +270,7 @@ async def cmd_help(message: types.Message):
 @router.message(F.text.in_(["👤 Profile", "👤 Профиль"]))
 async def show_profile(message: types.Message):
     logging.info(f"User {message.from_user.id} requested Profile")
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     if user:
         role = user.get('actual_role', user.get('role', 'guest'))
         lang = user.get("language", "ru")

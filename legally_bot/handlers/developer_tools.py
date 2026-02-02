@@ -8,7 +8,7 @@ from legally_bot.keyboards.keyboards import developer_kb
 from io import BytesIO
 import logging
 
-from legally_bot.database.users_repo import UserRepository
+from legally_bot.database.users_repo import UsersRepository
 from legally_bot.services.i18n import I18n
 
 router = Router()
@@ -18,7 +18,7 @@ ingest_service = IngestionService()
 @router.message(Command("dev"))
 async def cmd_dev(message: types.Message):
     logging.info(f"Developer {message.from_user.id} accessed Dev Tools")
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
 
     if not await AccessControl.is_developer(message.from_user.id):
@@ -32,7 +32,7 @@ async def start_upload(message: types.Message, state: FSMContext):
     if not await AccessControl.is_developer(message.from_user.id):
         return
     
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
 
     msg = "Send me a PDF, DOCX, MD, or TXT file to ingest." if lang == "en" else "Отправьте мне файл PDF, DOCX, MD или TXT для загрузки."
@@ -44,7 +44,7 @@ async def handle_document(message: types.Message, state: FSMContext, bot: Bot):
     if not await AccessControl.is_developer(message.from_user.id):
         return
     
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     
     doc = message.document
@@ -82,7 +82,7 @@ async def start_link_ingest(message: types.Message, state: FSMContext):
     if not await AccessControl.is_developer(message.from_user.id):
         return
     
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
 
     msg = "Please send me the URL you want to ingest." if lang == "en" else "Пожалуйста, отправьте мне URL, который вы хотите загрузить."
@@ -94,7 +94,7 @@ async def handle_link(message: types.Message, state: FSMContext):
     if not await AccessControl.is_developer(message.from_user.id):
         return
     
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     
     url = message.text

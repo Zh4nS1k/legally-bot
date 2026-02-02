@@ -15,3 +15,9 @@ google-generativeai
 groq
 aiosmtplib
 trafilatura
+
+# RAG 3.0 (Batch & Infra)
+pandas
+openpyxl
+chromadb
+tenacity

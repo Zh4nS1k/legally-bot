@@ -13,7 +13,7 @@ from legally_bot.config import settings
 from legally_bot.database.mongo_db import MongoDB
 
 # Import handlers
-from legally_bot.handlers import common, registration, developer_tools, admin, student_mode, professor_mode, chat_handler
+from legally_bot.handlers import common, registration, developer_tools, admin, student_mode, professor_mode, chat_handler, admin_lms, lms_rating
 
 async def main():
     logging.info("✅ Logging initialized (File + Console)")
@@ -34,6 +34,8 @@ async def main():
     dp.include_router(student_mode.router)
     dp.include_router(professor_mode.router)
     dp.include_router(admin.router)
+    dp.include_router(admin_lms.router)
+    dp.include_router(lms_rating.router)
     dp.include_router(developer_tools.router)
     
     # Register Middleware

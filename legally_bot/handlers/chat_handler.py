@@ -4,7 +4,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from legally_bot.services.rag_engine import RAGEngine
 from legally_bot.services.access_control import AccessControl
-from legally_bot.database.users_repo import UserRepository
+from legally_bot.database.users_repo import UsersRepository
 from legally_bot.database.feedback_repo import FeedbackRepository
 from legally_bot.keyboards.keyboards import rating_kb, get_main_menu
 from legally_bot.states.states import ChatState
@@ -17,14 +17,14 @@ rag_engine = RAGEngine()
 @router.message(F.text.in_(["💬 Chat with AI", "💬 Чат с ИИ"]))
 @router.message(Command("chat"))
 async def start_chat(message: types.Message, state: FSMContext):
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     await state.set_state(ChatState.chatting)
     await message.answer(I18n.t("chat_mode", lang))
 
 @router.message(ChatState.chatting)
 async def handle_chat_message(message: types.Message, state: FSMContext):
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     
     if message.text.lower() in ["exit", "stop", "back", "выход", "стоп", "назад"]:
@@ -39,7 +39,7 @@ async def handle_chat_message(message: types.Message, state: FSMContext):
         return
 
     # Determine user role and limits
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     role = user.get("actual_role", user.get("role", "guest")) if user else "guest"
     
     num_chunks = 0
@@ -130,7 +130,7 @@ async def process_comment(message: types.Message, state: FSMContext):
         comment=comment
     )
     
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     await message.answer(I18n.t("thank_feedback", lang))
     await state.set_state(ChatState.chatting)

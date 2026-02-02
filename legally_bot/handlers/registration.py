@@ -2,7 +2,7 @@ from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from legally_bot.states.states import RegistrationState
 from legally_bot.keyboards.keyboards import get_main_menu
-from legally_bot.database.users_repo import UserRepository
+from legally_bot.database.users_repo import UsersRepository
 from legally_bot.services.email_service import EmailService
 import logging
 
@@ -79,7 +79,7 @@ async def process_code(message: types.Message, state: FSMContext):
     # Code is correct, proceed to registration
     role = "guest"
     
-    await UserRepository.create_user(
+    await UsersRepository.create_user(
         telegram_id=message.from_user.id,
         full_name=data['full_name'],
         email=data['email'],

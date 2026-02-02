@@ -1,30 +1,30 @@
-from legally_bot.database.users_repo import UserRepository
+from legally_bot.database.users_repo import UsersRepository
 
 class AccessControl:
     @staticmethod
     async def is_admin(telegram_id: int) -> bool:
-        user = await UserRepository.get_user(telegram_id)
+        user = await UsersRepository.get_user(telegram_id)
         if not user:
             return False
         return user.get("actual_role") == "admin"
 
     @staticmethod
     async def is_professor(telegram_id: int) -> bool:
-        user = await UserRepository.get_user(telegram_id)
+        user = await UsersRepository.get_user(telegram_id)
         if not user:
             return False
         return user.get("actual_role") in ["professor", "admin"]
 
     @staticmethod
     async def is_student(telegram_id: int) -> bool:
-        user = await UserRepository.get_user(telegram_id)
+        user = await UsersRepository.get_user(telegram_id)
         if not user:
             return False
         return user.get("actual_role") in ["student", "admin", "professor"]
 
     @staticmethod
     async def is_developer(telegram_id: int) -> bool:
-        user = await UserRepository.get_user(telegram_id)
+        user = await UsersRepository.get_user(telegram_id)
         if not user:
             return False
         

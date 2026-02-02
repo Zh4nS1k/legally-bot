@@ -1,7 +1,7 @@
 from legally_bot.database.mongo_db import db
 from datetime import datetime
 
-class UserRepository:
+class UsersRepository:
     collection = "users"
 
     @classmethod

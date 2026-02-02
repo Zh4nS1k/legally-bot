@@ -4,7 +4,7 @@ from legally_bot.services.workflow import WorkflowService
 from legally_bot.keyboards.keyboards import professor_review_kb
 import logging
 
-from legally_bot.database.users_repo import UserRepository
+from legally_bot.database.users_repo import UsersRepository
 from legally_bot.services.i18n import I18n
 
 router = Router()
@@ -12,7 +12,7 @@ router = Router()
 @router.message(F.text.in_(["📝 Review Corrections", "📝 Проверить исправления"]))
 async def review_corrections(message: types.Message):
     logging.info(f"Professor {message.from_user.id} requested review queue")
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
 
     if not await AccessControl.is_professor(message.from_user.id):
@@ -41,7 +41,7 @@ async def process_review(callback: types.CallbackQuery):
     if not await AccessControl.is_professor(callback.from_user.id):
         return
 
-    user = await UserRepository.get_user(callback.from_user.id)
+    user = await UsersRepository.get_user(callback.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
 
     action, feedback_id = callback.data.split("_")[1], callback.data.split("_")[2]

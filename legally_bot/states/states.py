@@ -22,3 +22,8 @@ class ChatState(StatesGroup):
 
 class ReviewState(StatesGroup):
     viewing_queue = State()
+
+class AdminStates(StatesGroup):
+    waiting_for_case_file = State()
+    waiting_for_assignee = State()
+    waiting_for_case_id = State()

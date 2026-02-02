@@ -13,6 +13,10 @@ class RAGEngine:
             self.api_key = settings.PINECONE_API_KEY
             self.environment = settings.PINECONE_ENV
             self.encoder = SentenceTransformer('BAAI/bge-large-en-v1.5')
+            # RAG 4.0: Cross-Encoder for Re-ranking
+            from sentence_transformers import CrossEncoder
+            self.cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
+            
             self.pc = Pinecone(api_key=self.api_key)
             self.index = self.pc.Index(settings.PINECONE_INDEX_NAME)
             
@@ -96,10 +100,30 @@ class RAGEngine:
             logging.info(f"🔎 Searching for: {query}")
             
             vector = self.encoder.encode(query).tolist()
-            # Retrieve enough documents to satisfy the maximum possible requirement (5 chunks + 5 articles = 10)
-            results = self.index.query(vector=vector, top_k=15, include_metadata=True)
+            
+            # RAG 4.0: Retrieve & Re-rank
+            # 1. Retrieve more candidates (Top-20)
+            initial_k = 20
+            results = self.index.query(vector=vector, top_k=initial_k, include_metadata=True)
             
             matches = results.get('matches', [])
+            
+            # 2. Re-rank with Cross-Encoder
+            if matches and self.cross_encoder:
+                # Prepare pairs: (Query, Document Text)
+                pairs = [[query, m['metadata'].get('text', '')] for m in matches]
+                scores = self.cross_encoder.predict(pairs)
+                
+                # Attach new scores
+                for match, score in zip(matches, scores):
+                    match['score'] = float(score) # Update score
+                    
+                # Sort by new score descending
+                matches.sort(key=lambda x: x['score'], reverse=True)
+                
+                # Log re-ranking effect
+                logging.info(f"Re-ranked top result: {matches[0]['metadata'].get('title')} (Score: {matches[0]['score']:.4f})")
+            
             chunks = []
             articles = []
             

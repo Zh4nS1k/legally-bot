@@ -1,4 +1,4 @@
-from legally_bot.database.users_repo import UserRepository
+from legally_bot.database.users_repo import UsersRepository
 from legally_bot.database.feedback_repo import FeedbackRepository
 from legally_bot.services.rag_engine import RAGEngine
 
@@ -29,7 +29,7 @@ class WorkflowService:
         
         if rating and rating > 7:
             # Good job, increment stats
-            await UserRepository.increment_cases_solved(user_id)
+            await UsersRepository.increment_cases_solved(user_id)
 
     @staticmethod
     async def get_professor_queue():

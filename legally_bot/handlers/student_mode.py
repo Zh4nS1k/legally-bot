@@ -7,7 +7,7 @@ from legally_bot.keyboards.keyboards import feedback_kb
 from legally_bot.states.states import StudentModeState
 import logging
 
-from legally_bot.database.users_repo import UserRepository
+from legally_bot.database.users_repo import UsersRepository
 from legally_bot.services.i18n import I18n
 
 router = Router()
@@ -15,7 +15,7 @@ router = Router()
 @router.message(F.text.in_(["🎓 Get Case", "🎓 Получить кейс"]))
 async def get_case(message: types.Message):
     logging.info(f"Student {message.from_user.id} requested a case")
-    user = await UserRepository.get_user(message.from_user.id)
+    user = await UsersRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
 
     if not await AccessControl.is_student(message.from_user.id):
@@ -52,7 +52,7 @@ async def feedback_good(callback: types.CallbackQuery):
     case_id = parts[2]
     
     logging.info(f"Student {callback.from_user.id} gave POSITIVE feedback for case {case_id}")
-    user = await UserRepository.get_user(callback.from_user.id)
+    user = await UsersRepository.get_user(callback.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
 
     await WorkflowService.submit_feedback(
@@ -73,7 +73,7 @@ async def feedback_logic(callback: types.CallbackQuery, state: FSMContext):
     parts = callback.data.split("_")
     case_id = parts[2]
     logging.info(f"Student {callback.from_user.id} reported LOGIC error for case {case_id}")
-    user = await UserRepository.get_user(callback.from_user.id)
+    user = await UsersRepository.get_user(callback.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     
     await state.update_data(case_id=case_id, error_type="logic", language=lang)
@@ -87,7 +87,7 @@ async def feedback_article(callback: types.CallbackQuery, state: FSMContext):
     parts = callback.data.split("_")
     case_id = parts[2]
     logging.info(f"Student {callback.from_user.id} reported ARTICLE error for case {case_id}")
-    user = await UserRepository.get_user(callback.from_user.id)
+    user = await UsersRepository.get_user(callback.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
 
     await state.update_data(case_id=case_id, error_type="wrong_article", language=lang)
