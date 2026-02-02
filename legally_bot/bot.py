@@ -2,19 +2,10 @@ import os
 import asyncio
 import logging
 
-# Create logs directory first to ensure logging can start
-if not os.path.exists("logs"):
-    os.makedirs("logs")
+from legally_bot.services.logging_setup import setup_logging
 
-# Configure logging IMMEDIATELY
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("logs/bot.log", encoding="utf-8")
-    ]
-)
+# Configure logging using custom setup
+setup_logging()
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.fsm.storage.memory import MemoryStorage
