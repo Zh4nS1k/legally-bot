@@ -109,8 +109,17 @@ class RAGEngine:
                 title = metadata.get('title', 'Unknown Source')
                 score = match.get('score', 0.0)
                 doc_type = metadata.get('type', 'chunk')
+                references = metadata.get('references', [])
 
-                doc_info = {"title": title, "content": text, "score": score, "type": doc_type}
+                doc_info = {
+                    "title": title, 
+                    "content": text, 
+                    "score": score, 
+                    "type": doc_type,
+                    "article": metadata.get('article'),
+                    "url": metadata.get('url'),
+                    "references": references
+                }
                 
                 if doc_type == 'article' and len(articles) < num_articles:
                     articles.append(doc_info)
@@ -135,6 +144,11 @@ class RAGEngine:
                     elif len(articles) < num_articles:
                         articles.append(doc_info)
 
+            # Graph Expansion (Dijkstra-ish)
+            expanded_results = await self._expand_context(chunks, articles)
+            chunks = expanded_results['chunks']
+            articles = expanded_results['articles']
+
             context_text = ""
             for d in chunks + articles:
                 context_text += f"---\nSource: {d.get('title', 'Unknown')}\n"
@@ -144,61 +158,47 @@ class RAGEngine:
             
             lang_instruction = "Respond in Russian." if lang == "ru" else "Respond in English."
             
-            prompt = f"""
-            You are an AI assistant specializing in Kazakhstan Law "Legally".
+            # Reasoning Chain (Markov-ish)
+            # Step 1: Draft
+            draft_prompt = f"""
+            You are an AI assistant specialized in Kazakhstan Law.
+            Strictly analyze the provided context to answer the user's question.
             
-            STRICT SYSTEM INSTRUCTIONS:
-            1. Use ONLY the provided Context to answer.
-            2. You MUST cite the specific "Source" and "Article" number for every claim.
-            3. If the context does not contain the answer, explicitly state that you cannot find the answer in the provided documents.
-            4. DO NOT hallucinate sources or articles.
-            5. {lang_instruction}
-
-            Answer Format:
-            "According to Article X of [Source Name]..."
-
             Context:
             {context_text}
             
             Question: {query}
             
-            Answer:
+            Draft a preliminary answer based ONLY on the context. Cite sources.
             """
             
-            # --- Fallback Logic ---
-            answer = None
-            errors = []
+            draft_answer = await self._generate_with_fallback(draft_prompt)
             
-            # 1. DeepSeek
-            try:
-                answer = await self._try_deepseek(prompt)
-            except Exception as e:
-                errors.append(f"DeepSeek failed: {e}")
-                logging.warning(errors[-1])
+            # Step 2: Refine (Transition)
+            final_prompt = f"""
+            You are a Senior Legal Editor. Review the draft answer against the context.
             
-            # 2. Gemini
-            if not answer:
-                try:
-                    answer = await self._try_gemini(prompt)
-                except Exception as e:
-                    errors.append(f"Gemini failed: {e}")
-                    logging.warning(errors[-1])
+            Context:
+            {context_text}
             
-            # 3. Groq
-            if not answer:
-                try:
-                    answer = await self._try_groq(prompt)
-                except Exception as e:
-                    errors.append(f"Groq failed: {e}")
-                    logging.warning(errors[-1])
+            Draft Answer:
+            {draft_answer}
             
-            if not answer:
-                error_summary = " | ".join(errors)
-                logging.error(f"All LLM providers failed: {error_summary}")
-                return {"answer": "⚠️ All AI providers are currently unavailable. Please try again later.", "chunks": [], "articles": []}
+            User Question: {query}
+            
+            Instructions:
+            1. Verify all citations exist in the context.
+            2. Remove any hallucinated details.
+            3. Ensure the tone is professional.
+            4. {lang_instruction}
+            
+            Final Answer:
+            """
+            
+            final_answer = await self._generate_with_fallback(final_prompt)
             
             return {
-                "answer": answer,
+                "answer": final_answer,
                 "chunks": chunks[:num_chunks],
                 "articles": articles[:num_articles]
             }
@@ -206,3 +206,96 @@ class RAGEngine:
         except Exception as e:
             logging.error(f"Search overall failed: {e}", exc_info=True)
             return {"answer": "Error during search.", "chunks": [], "articles": []}
+
+    async def _expand_context(self, chunks: list, articles: list):
+        """
+        Graph Traversal: Analyzes 'references' metadata in retrieved chunks 
+        and fetches the cited articles to expand context.
+        """
+        referenced_articles = []
+        for doc in chunks + articles:
+            # Check if this document has references
+            # In search(), we need to make sure we extracted 'references' from metadata
+            refs = doc.get("references", [])
+            referenced_articles.extend(refs) # Add IDs
+            
+        referenced_articles = list(set(referenced_articles)) # Unique
+        
+        if not referenced_articles:
+            return {"chunks": chunks, "articles": articles}
+            
+        logging.info(f"🔗 Graph Traversal: Found references to articles {referenced_articles}")
+        
+        # Traverse Graph: Fetch these specific articles
+        # This requires a new search or fetch operation.
+        # Since we stored 'article' in metadata, we can filter for it.
+        
+        try:
+            # We can't do a massive OR filter in one go specific to `article` IN list easily with vector search metadata filter 
+            # if the list is huge, but for a few it's fine.
+            # $in is supported.
+            
+            filter_query = {
+                "article": {"$in": referenced_articles},
+                "type": "article"
+            }
+            
+            # Semantic search is less relevant here, we want exact matches.
+            # But Pinecone query usually requires a vector.
+            # We can use a dummy vector (all zeros) or just query with a generic law vector.
+            # OR fetch by ID if we knew the vector IDs. We don't.
+            # We will use a dummy query with filter.
+            
+            dummy_vector = [0.0] * 1024 # BGE-Large dimension is 1024
+            
+            results = self.index.query(
+                vector=dummy_vector,
+                filter=filter_query,
+                top_k=len(referenced_articles),
+                include_metadata=True
+            )
+            
+            matches = results.get('matches', [])
+            for match in matches:
+                metadata = match.get('metadata', {})
+                doc_info = {
+                    "title": metadata.get('source', 'Unknown Source'),
+                    "content": metadata.get('text', 'No text'),
+                    "score": 1.0, # High confidence for explicit citations
+                    "type": "article",
+                    "article": metadata.get('article'),
+                    "url": metadata.get('url'),
+                    "references": metadata.get("references", [])
+                }
+                
+                # Add if not already present
+                is_present = any(d['content'] == doc_info['content'] for d in articles)
+                if not is_present:
+                    logging.info(f"   -> Fetched cited Article {doc_info['article']}")
+                    articles.append(doc_info)
+                    
+        except Exception as e:
+            logging.error(f"Graph traversal failed: {e}")
+            
+        return {"chunks": chunks, "articles": articles}
+
+    async def _generate_with_fallback(self, prompt: str):
+        # 1. DeepSeek
+        try:
+            return await self._try_deepseek(prompt)
+        except Exception:
+            pass
+        
+        # 2. Gemini
+        try:
+            return await self._try_gemini(prompt)
+        except Exception:
+            pass
+            
+        # 3. Groq
+        try:
+            return await self._try_groq(prompt)
+        except Exception:
+            pass
+            
+        return "⚠️ AI service unavailable."

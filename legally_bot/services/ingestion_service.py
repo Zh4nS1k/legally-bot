@@ -182,10 +182,21 @@ class IngestionService:
                 "article": article_num,
                 "source": source_title,
                 "url": source_url,
-                "type": "article"
+                "type": "article",
+                "references": self._extract_references(full_text)
             })
                 
         return chunks
+
+    def _extract_references(self, text: str) -> list[str]:
+        """
+        Finds references to other articles, e.g., "Article 5", "ст. 5".
+        Returns a list of unique Article numbers.
+        """
+        pattern = r"(?:article|art\.|ст\.|стать[а-я]*)\s+(\d+(?:-\d+)?)"
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        # Return unique sorted list
+        return sorted(list(set(matches)))
 
     def _split_large_chunk(self, text: str, max_size=2000, overlap=100):
         """
@@ -237,7 +248,8 @@ class IngestionService:
                 "source": chunk_data['source'],
                 "url": chunk_data['url'],
                 "article": str(chunk_data['article']),
-                "type": chunk_data['type']
+                "type": chunk_data['type'],
+                "references": chunk_data.get('references', [])
             }
             vectors.append((vector_id, embedding, metadata))
         
