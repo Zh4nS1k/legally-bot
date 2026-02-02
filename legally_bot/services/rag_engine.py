@@ -87,7 +87,7 @@ class RAGEngine:
         )
         return completion.choices[0].message.content
 
-    async def search(self, query: str):
+    async def search(self, query: str, num_chunks: int = 3, num_articles: int = 3):
         if not self.index:
             logging.warning("RAG Index not available.")
             return {"answer": "Search currently unavailable.", "chunks": [], "articles": []}
@@ -96,10 +96,10 @@ class RAGEngine:
             logging.info(f"🔎 Searching for: {query}")
             
             vector = self.encoder.encode(query).tolist()
-            results = self.index.query(vector=vector, top_k=6, include_metadata=True)
+            # Retrieve enough documents to satisfy the maximum possible requirement (5 chunks + 5 articles = 10)
+            results = self.index.query(vector=vector, top_k=15, include_metadata=True)
             
             matches = results.get('matches', [])
-            source_docs = []
             chunks = []
             articles = []
             
@@ -111,20 +111,29 @@ class RAGEngine:
                 doc_type = metadata.get('type', 'chunk')
 
                 doc_info = {"title": title, "content": text, "score": score, "type": doc_type}
-                source_docs.append(doc_info)
                 
-                if doc_type == 'article' and len(articles) < 3:
+                if doc_type == 'article' and len(articles) < num_articles:
                     articles.append(doc_info)
-                elif len(chunks) < 3:
+                elif doc_type != 'article' and len(chunks) < num_chunks:
                     chunks.append(doc_info)
             
-            if not articles and not chunks:
-                chunks = source_docs[:3]
-                articles = source_docs[3:6]
-            elif not articles:
-                articles = source_docs[len(chunks):len(chunks)+3]
-            elif not chunks:
-                chunks = source_docs[len(articles):len(articles)+3]
+            # Fill with any matches if we didn't get enough specific types
+            if len(chunks) < num_chunks or len(articles) < num_articles:
+                for match in matches:
+                    metadata = match.get('metadata', {})
+                    doc_info = {
+                        "title": metadata.get('title', 'Unknown Source'),
+                        "content": metadata.get('text', 'No text'),
+                        "score": match.get('score', 0.0),
+                        "type": metadata.get('type', 'chunk')
+                    }
+                    if doc_info in chunks or doc_info in articles:
+                        continue
+                        
+                    if len(chunks) < num_chunks:
+                        chunks.append(doc_info)
+                    elif len(articles) < num_articles:
+                        articles.append(doc_info)
 
             context_text = "\n\n".join([f"Source: {d['title']}\nContent: {d['content']}" for d in chunks + articles])
             
@@ -175,8 +184,8 @@ class RAGEngine:
             
             return {
                 "answer": answer,
-                "chunks": chunks[:3],
-                "articles": articles[:3]
+                "chunks": chunks[:num_chunks],
+                "articles": articles[:num_articles]
             }
 
         except Exception as e:

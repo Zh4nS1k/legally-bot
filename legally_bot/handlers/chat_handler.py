@@ -26,13 +26,38 @@ async def handle_chat_message(message: types.Message, state: FSMContext):
         role = user.get("actual_role", user.get("role", "guest")) if user else "guest"
         return await message.answer("Exited chat mode.", reply_markup=get_main_menu(role))
 
+    # Determine user role and limits
+    user = await UserRepository.get_user(message.from_user.id)
+    role = user.get("actual_role", user.get("role", "guest")) if user else "guest"
+    
+    num_chunks = 0
+    num_articles = 0
+    
+    if role in ["student", "professor"]:
+        num_chunks = 3
+        num_articles = 3
+    elif role in ["developer", "admin"]:
+        num_chunks = 5
+        num_articles = 5
+
     # Search and generate answer
     await message.bot.send_chat_action(message.chat.id, "typing")
-    result = await rag_engine.search(message.text)
+    # We pass the limits to the search method. 
+    # For guest, it will use 0 chunks/articles in the final response, 
+    # but the RAG engine still needs some context to answer.
+    # Actually, the user says "user or guest can get only - answer".
+    # This means they shouldn't see chunks/articles.
+    # However, the AI still needs context to answer based on Kazakhstan law.
+    # So we should retrieve context but NOT show it to guests.
+    
+    search_limit_chunks = max(num_chunks, 3) # Minimum 3 for AI context
+    search_limit_articles = max(num_articles, 3)
+    
+    result = await rag_engine.search(message.text, num_chunks=search_limit_chunks, num_articles=search_limit_articles)
     
     answer = result.get("answer", "I'm sorry, I couldn't find an answer.")
-    chunks = result.get("chunks", [])
-    articles = result.get("articles", [])
+    chunks = result.get("chunks", [])[:num_chunks]
+    articles = result.get("articles", [])[:num_articles]
 
     response_text = f"🤖 **AI Answer:**\n{answer}\n\n"
     
@@ -47,10 +72,6 @@ async def handle_chat_message(message: types.Message, state: FSMContext):
         for i, art in enumerate(articles, 1):
             response_text += f"{i}. {art['title']}: {art['content'][:200]}...\n"
 
-    # Role check for rating
-    user = await UserRepository.get_user(message.from_user.id)
-    role = user.get("actual_role", user.get("role", "guest")) if user else "guest"
-    
     can_rate = role in ["student", "professor", "developer", "admin"]
     
     kb = None
