@@ -32,6 +32,12 @@ async def handle_chat_message(message: types.Message, state: FSMContext):
         role = user.get("actual_role", user.get("role", "guest")) if user else "guest"
         return await message.answer(I18n.t("exit_chat", lang), reply_markup=get_main_menu(role, lang))
 
+    # Intercept commands that shouldn't be processed as RAG queries
+    if message.text.startswith("/"):
+        logging.info(f"Command '{message.text}' intercepted in Chat Mode")
+        await message.answer("⚠️ Unknown command or command not available in Chat Mode.\nType 'exit' to return to menu or just type your legal question.")
+        return
+
     # Determine user role and limits
     user = await UserRepository.get_user(message.from_user.id)
     role = user.get("actual_role", user.get("role", "guest")) if user else "guest"

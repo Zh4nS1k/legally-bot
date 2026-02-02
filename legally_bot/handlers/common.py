@@ -58,6 +58,7 @@ async def process_role_request(callback: types.CallbackQuery, bot: Bot):
 
 @router.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
+    await state.clear()
     logging.info(f"User {message.from_user.id} called /start")
     user = await UserRepository.get_user(message.from_user.id)
     if not user:
