@@ -9,18 +9,26 @@ class UserRepository:
         return await db.get_db()[cls.collection].find_one({"telegram_id": telegram_id})
 
     @classmethod
-    async def create_user(cls, telegram_id: int, full_name: str, email: str, role: str):
+    async def create_user(cls, telegram_id: int, full_name: str, email: str, role: str, language: str = "ru"):
         user_data = {
             "telegram_id": telegram_id,
             "full_name": full_name,
             "email": email,
             "requested_role": role,
             "actual_role": "guest",  # Default role
+            "language": language,
             "cases_solved_count": 0,
             "created_at": datetime.utcnow()
         }
         await db.get_db()[cls.collection].insert_one(user_data)
         return user_data
+
+    @classmethod
+    async def update_language(cls, telegram_id: int, language: str):
+        await db.get_db()[cls.collection].update_one(
+            {"telegram_id": telegram_id},
+            {"$set": {"language": language}}
+        )
 
     @classmethod
     async def update_role(cls, telegram_id: int, new_role: str):

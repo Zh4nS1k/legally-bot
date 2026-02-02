@@ -9,22 +9,28 @@ from legally_bot.database.feedback_repo import FeedbackRepository
 from legally_bot.keyboards.keyboards import rating_kb, get_main_menu
 from legally_bot.states.states import ChatState
 
+from legally_bot.services.i18n import I18n
+
 router = Router()
 rag_engine = RAGEngine()
 
-@router.message(F.text == "💬 Chat with AI")
+@router.message(F.text.in_(["💬 Chat with AI", "💬 Чат с ИИ"]))
 @router.message(Command("chat"))
 async def start_chat(message: types.Message, state: FSMContext):
+    user = await UserRepository.get_user(message.from_user.id)
+    lang = user.get("language", "ru") if user else "ru"
     await state.set_state(ChatState.chatting)
-    await message.answer("💬 You are now in Chat Mode. Ask me any question about Kazakhstan law!\nType 'exit' or click a menu button to stop.")
+    await message.answer(I18n.t("chat_mode", lang))
 
 @router.message(ChatState.chatting)
 async def handle_chat_message(message: types.Message, state: FSMContext):
-    if message.text.lower() in ["exit", "stop", "back"]:
+    user = await UserRepository.get_user(message.from_user.id)
+    lang = user.get("language", "ru") if user else "ru"
+    
+    if message.text.lower() in ["exit", "stop", "back", "выход", "стоп", "назад"]:
         await state.clear()
-        user = await UserRepository.get_user(message.from_user.id)
         role = user.get("actual_role", user.get("role", "guest")) if user else "guest"
-        return await message.answer("Exited chat mode.", reply_markup=get_main_menu(role))
+        return await message.answer(I18n.t("exit_chat", lang), reply_markup=get_main_menu(role, lang))
 
     # Determine user role and limits
     user = await UserRepository.get_user(message.from_user.id)
@@ -53,22 +59,22 @@ async def handle_chat_message(message: types.Message, state: FSMContext):
     search_limit_chunks = max(num_chunks, 3) # Minimum 3 for AI context
     search_limit_articles = max(num_articles, 3)
     
-    result = await rag_engine.search(message.text, num_chunks=search_limit_chunks, num_articles=search_limit_articles)
+    result = await rag_engine.search(message.text, num_chunks=search_limit_chunks, num_articles=search_limit_articles, lang=lang)
     
     answer = result.get("answer", "I'm sorry, I couldn't find an answer.")
     chunks = result.get("chunks", [])[:num_chunks]
     articles = result.get("articles", [])[:num_articles]
 
-    response_text = f"🤖 **AI Answer:**\n{answer}\n\n"
+    response_text = f"{I18n.t('ai_answer', lang)}\n{answer}\n\n"
     
     if chunks:
-        response_text += "🔍 **Top Chunks:**\n"
+        response_text += f"{I18n.t('top_chunks', lang)}\n"
         for i, chunk in enumerate(chunks, 1):
             response_text += f"{i}. {chunk['title']}: {chunk['content'][:200]}...\n"
         response_text += "\n"
 
     if articles:
-        response_text += "⚖️ **Relevant Law Articles:**\n"
+        response_text += f"{I18n.t('relevant_articles', lang)}\n"
         for i, art in enumerate(articles, 1):
             response_text += f"{i}. {art['title']}: {art['content'][:200]}...\n"
 
@@ -78,7 +84,7 @@ async def handle_chat_message(message: types.Message, state: FSMContext):
     if can_rate:
         # Using message.message_id as a reference for feedback
         kb = rating_kb(str(message.message_id))
-        response_text += "\n\n⭐ Please rate this answer (0-10):"
+        response_text += f"\n\n{I18n.t('rate_answer', lang)}"
 
     # Escape or remove problematic Markdown characters to prevent parsing errors
     # For Telegram Markdown, certain characters like '_' or '*' can break if not closed
@@ -118,5 +124,7 @@ async def process_comment(message: types.Message, state: FSMContext):
         comment=comment
     )
     
-    await message.answer("Thank you for your feedback! You can continue chatting now.")
+    user = await UserRepository.get_user(message.from_user.id)
+    lang = user.get("language", "ru") if user else "ru"
+    await message.answer(I18n.t("thank_feedback", lang))
     await state.set_state(ChatState.chatting)

@@ -1,24 +1,33 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
-def get_main_menu(role: str):
+from legally_bot.services.i18n import I18n
+
+def get_main_menu(role: str, lang: str = "ru"):
     builder = ReplyKeyboardBuilder()
     
     # All roles can chat
-    builder.row(KeyboardButton(text="💬 Chat with AI"))
+    builder.row(KeyboardButton(text=I18n.t("chat_with_ai", lang)))
 
     if role == "student":
-        builder.row(KeyboardButton(text="🎓 Get Case"))
-        builder.row(KeyboardButton(text="📊 My Stats"))
+        builder.row(KeyboardButton(text=I18n.t("get_case", lang)))
+        builder.row(KeyboardButton(text=I18n.t("my_stats", lang)))
     elif role == "professor":
-        builder.row(KeyboardButton(text="📝 Review Corrections"))
+        builder.row(KeyboardButton(text=I18n.t("review_corrections", lang)))
     elif role == "admin":
-        builder.row(KeyboardButton(text="🎓 Get Case"), KeyboardButton(text="📊 My Stats"))
-        builder.row(KeyboardButton(text="📝 Review Corrections"))
-        builder.row(KeyboardButton(text="👥 Manage Users"), KeyboardButton(text="⚙️ Developer Tools"))
+        builder.row(KeyboardButton(text=I18n.t("get_case", lang)), KeyboardButton(text=I18n.t("my_stats", lang)))
+        builder.row(KeyboardButton(text=I18n.t("review_corrections", lang)))
+        builder.row(KeyboardButton(text=I18n.t("manage_users", lang)), KeyboardButton(text=I18n.t("dev_tools", lang)))
     
-    builder.row(KeyboardButton(text="👤 Profile"))
+    builder.row(KeyboardButton(text=I18n.t("profile", lang)))
     return builder.as_markup(resize_keyboard=True)
+
+def language_selection_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Русский 🇷🇺", callback_data="lang_ru")
+    builder.button(text="English 🇺🇸", callback_data="lang_en")
+    builder.adjust(2)
+    return builder.as_markup()
 
 def role_selection_kb():
     builder = InlineKeyboardBuilder()
@@ -27,14 +36,21 @@ def role_selection_kb():
     builder.adjust(2)
     return builder.as_markup()
 
-def feedback_kb(case_id: str, response_id: str):
+def feedback_kb(case_id: str, response_id: str, lang: str = "ru"):
     builder = InlineKeyboardBuilder()
+    
+    labels = {
+        "ru": ["✅ Все верно", "⚠️ Логическая ошибка", "❌ Неверная статья"],
+        "en": ["✅ Everything Correct", "⚠️ Logic Error", "❌ Wrong Article"]
+    }
+    l = labels.get(lang, labels["ru"])
+
     # Correct response
-    builder.button(text="✅ Everything Correct", callback_data=f"fb_good_{case_id}")
+    builder.button(text=l[0], callback_data=f"fb_good_{case_id}")
     # Logic Error
-    builder.button(text="⚠️ Logic Error", callback_data=f"fb_logic_{case_id}")
+    builder.button(text=l[1], callback_data=f"fb_logic_{case_id}")
     # Wrong Article
-    builder.button(text="❌ Wrong Article", callback_data=f"fb_article_{case_id}")
+    builder.button(text=l[2], callback_data=f"fb_article_{case_id}")
     builder.adjust(1)
     return builder.as_markup()
 

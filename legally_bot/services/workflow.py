@@ -7,10 +7,10 @@ rag = RAGEngine()
 class WorkflowService:
     
     @staticmethod
-    async def process_student_question(user_id: int, question: str):
+    async def process_student_question(user_id: int, question: str, lang: str = "ru"):
         # 1. Check if user is student ?? (handled in handler)
         # 2. Get answer from RAG
-        result = await rag.search(question)
+        result = await rag.search(question, lang=lang)
         
         # 3. Save interaction ?? (Optional, depending on detailed logging requirements)
         # For now, we return the result to the handler to display

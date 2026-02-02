@@ -87,7 +87,7 @@ class RAGEngine:
         )
         return completion.choices[0].message.content
 
-    async def search(self, query: str, num_chunks: int = 3, num_articles: int = 3):
+    async def search(self, query: str, num_chunks: int = 3, num_articles: int = 3, lang: str = "ru"):
         if not self.index:
             logging.warning("RAG Index not available.")
             return {"answer": "Search currently unavailable.", "chunks": [], "articles": []}
@@ -137,9 +137,12 @@ class RAGEngine:
 
             context_text = "\n\n".join([f"Source: {d['title']}\nContent: {d['content']}" for d in chunks + articles])
             
+            lang_instruction = "Respond in Russian." if lang == "ru" else "Respond in English."
+            
             prompt = f"""
             You are an AI assistant specializing in Kazakhstan Law. 
             Use the following context to answer the user's question accurately.
+            {lang_instruction}
             If the context doesn't contain the answer, say you don't know based on the provided documents, but try to be helpful.
             
             Context:
