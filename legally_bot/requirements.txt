@@ -13,3 +13,4 @@ markdown
 pydantic-settings
 google-generativeai
 groq
+aiosmtplib

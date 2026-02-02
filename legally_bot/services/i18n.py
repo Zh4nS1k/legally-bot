@@ -32,6 +32,12 @@ class I18n:
             "already_requested": "У вас уже есть ожидающий запрос на роль **{role}**.",
             "role_approved": "🎉 Ваша роль **{role}** была одобрена!",
             "role_rejected": "❌ Ваш запрос на роль **{role}** был отклонен.",
+            "invalid_name": "❌ Имя должно содержать не менее 2 букв и не содержать цифр или спецсимволов. Попробуйте еще раз:",
+            "invalid_email": "❌ Неверный формат Email. Попробуйте еще раз:",
+            "code_sent": "📧 Код подтверждения отправлен на {email}.",
+            "enter_code": "🔑 Пожалуйста, введите 6-значный код из письма:",
+            "wrong_code": "❌ Неверный код. Попробуйте еще раз или введите /start для перезапуска.",
+            "resend_code": "Код отправлен повторно.",
         },
         "en": {
             "welcome": "Welcome to Legally — your AI Lex Expert!\nLet's get started. Please enter your **Full Name**:",
@@ -64,6 +70,12 @@ class I18n:
             "already_requested": "You already have a pending request for the **{role}** role.",
             "role_approved": "🎉 Your role **{role}** has been approved!",
             "role_rejected": "❌ Your request for the **{role}** role has been rejected.",
+            "invalid_name": "❌ Name must appear to be valid (2+ letters). Try again:",
+            "invalid_email": "❌ Invalid Email format. Try again:",
+            "code_sent": "📧 Verification code sent to {email}.",
+            "enter_code": "🔑 Please enter the 6-digit code from the email:",
+            "wrong_code": "❌ Incorrect code. Try again or type /start to restart.",
+            "resend_code": "Code resent.",
         }
     }
 

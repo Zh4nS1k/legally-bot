@@ -4,6 +4,7 @@ class RegistrationState(StatesGroup):
     waiting_for_language = State()
     waiting_for_name = State()
     waiting_for_email = State()
+    waiting_for_code = State()
     waiting_for_role = State()
 
 class IngestionState(StatesGroup):

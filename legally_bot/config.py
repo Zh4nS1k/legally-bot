@@ -12,6 +12,14 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str
     OPENROUTER_API_KEY: str = ""
     GROQ_API_KEY: str = ""
+    
+    # SMTP Settings
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASS: str = ""
+    SMTP_FROM: str = "noreply@legallybot.com"
+
     ADMIN_IDS: str  # Comma separated list of admin IDs
 
     @property
