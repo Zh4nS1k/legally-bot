@@ -260,6 +260,11 @@ async def cmd_help(message: types.Message):
     user = await UserRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     
+    try:
+        await message.answer_photo(settings.WELCOME_IMAGE_URL)
+    except Exception as e:
+        logging.error(f"Failed to send help image: {e}")
+
     await message.answer(I18n.t("help_text", lang), parse_mode="Markdown")
 
 @router.message(F.text.in_(["👤 Profile", "👤 Профиль"]))

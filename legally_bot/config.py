@@ -4,8 +4,11 @@ from typing import List
 
 class Settings(BaseSettings):
     BOT_TOKEN: str
-    MONGO_URI: str
+    MONGO_URI: str = "mongodb://localhost:27017"
     DB_NAME: str = "legally_db"
+    
+    WELCOME_IMAGE_URL: str = "https://drive.google.com/uc?export=view&id=1ZrFuY83E8EQLFAAchSSU0RIQ3YwGIT-m"
+    
     PINECONE_API_KEY: str
     PINECONE_ENV: str
     PINECONE_INDEX_NAME: str

@@ -61,6 +61,10 @@ async def process_email(message: types.Message, state: FSMContext):
         logging.error("Failed to send code. SMTP might be down.")
         await message.answer("⚠️ System Error: Could not send verification code. Please contact support.")
 
+from legally_bot.config import settings
+
+# ... imports ...
+
 @router.message(RegistrationState.waiting_for_code)
 async def process_code(message: types.Message, state: FSMContext):
     code_input = message.text.strip()
@@ -83,6 +87,12 @@ async def process_code(message: types.Message, state: FSMContext):
         language=lang
     )
     
+    # Send Welcome Image
+    try:
+        await message.answer_photo(settings.WELCOME_IMAGE_URL)
+    except Exception as e:
+        logging.error(f"Failed to send welcome image: {e}")
+
     await message.answer(
         I18n.t("reg_received", lang, role=role) + "\n\n" + I18n.t("guest_info", lang),
         reply_markup=get_main_menu("guest", lang),
