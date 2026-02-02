@@ -35,7 +35,7 @@ async def start_upload(message: types.Message, state: FSMContext):
     user = await UserRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
 
-    msg = "Send me a PDF, DOCX, or MD file to ingest." if lang == "en" else "Отправьте мне файл PDF, DOCX или MD для загрузки."
+    msg = "Send me a PDF, DOCX, MD, or TXT file to ingest." if lang == "en" else "Отправьте мне файл PDF, DOCX, MD или TXT для загрузки."
     await message.answer(msg)
     await state.set_state(IngestionState.waiting_for_file)
 
@@ -64,6 +64,8 @@ async def handle_document(message: types.Message, state: FSMContext, bot: Bot):
         file_type = "docx"
     elif file_name.endswith('.md'):
         file_type = "md"
+    elif file_name.endswith('.txt'):
+        file_type = "txt"
     
     if file_type:
         count = await ingest_service.ingest_file(file_content, file_name, file_type)
@@ -71,7 +73,7 @@ async def handle_document(message: types.Message, state: FSMContext, bot: Bot):
         await message.answer(msg)
         await state.clear()
     else:
-        msg = "❌ Unsupported file format. Please send PDF, DOCX, or MD." if lang == "en" else "❌ Неподдерживаемый формат файла. Пожалуйста, отправьте PDF, DOCX или MD."
+        msg = "❌ Unsupported file format. Please send PDF, DOCX, MD, or TXT." if lang == "en" else "❌ Неподдерживаемый формат файла. Пожалуйста, отправьте PDF, DOCX, MD или TXT."
         await message.answer(msg)
 
 @router.message(Command("ingest_link"))

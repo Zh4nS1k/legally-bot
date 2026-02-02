@@ -36,7 +36,7 @@ class IngestionService:
                     text = await self._extract_pdf_with_strategy(file_content, attempt)
                 elif file_type == "docx":
                     text = self._extract_docx(file_content)
-                elif file_type == "md":
+                elif file_type == "md" or file_type == "txt":
                     text = file_content.getvalue().decode("utf-8")
                 
                 if text and text.strip():

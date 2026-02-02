@@ -179,7 +179,7 @@ async def cmd_help(message: types.Message):
             "developer": (
                 "**⚙️ Инструкция для Разработчика:**\n"
                 "Управление базой знаний RAG.\n"
-                "1. **Загрузка файлов**: Используйте `/upload` и отправьте PDF, DOCX или MD файл.\n"
+                "1. **Загрузка файлов**: Используйте `/upload` и отправьте PDF, DOCX, MD или TXT файл.\n"
                 "2. **Загрузка ссылок**: Используйте `/ingest_link` и укажите URL.\n"
                 "3. **Верификация**: Бот подтвердит, сколько 'фрагментов' было добавлено в Pinecone."
             )
@@ -233,7 +233,7 @@ async def cmd_help(message: types.Message):
             "developer": (
                 "**⚙️ Developer Instruction:**\n"
                 "Manage the RAG knowledge base.\n"
-                "1. **Ingest Files**: Use `/upload` and send a PDF, DOCX, or MD file.\n"
+                "1. **Ingest Files**: Use `/upload` and send a PDF, DOCX, MD, or TXT file.\n"
                 "2. **Ingest Links**: Use `/ingest_link` and provide a URL to scrape.\n"
                 "3. **Verification**: The bot will confirm how many 'chunks' were added to Pinecone."
             )
@@ -292,7 +292,7 @@ async def show_profile(message: types.Message):
                 ),
                 "developer": (
                     "• 💬 **Чат**: Общайтесь с ИИ, оценивайте ответы и добавляйте комментарии.\n"
-                    "• 📥 **Загрузка документов**: Загружайте PDF/DOCX/MD файлы.\n"
+                    "• 📥 **Загрузка документов**: Загружайте PDF/DOCX/MD/TXT файлы.\n"
                     "• 🔗 **Веб-скрейпинг**: Загружайте контент напрямую по URL."
                 )
             },
@@ -317,7 +317,7 @@ async def show_profile(message: types.Message):
                 ),
                 "developer": (
                     "• 💬 **Chat**: Chat with AI, rate answers, and add comments.\n"
-                    "• 📥 **Document Ingestion**: Upload PDF/DOCX/MD files.\n"
+                    "• 📥 **Document Ingestion**: Upload PDF/DOCX/MD/TXT files.\n"
                     "• 🔗 **Web Scraping**: Ingest content directly from URLs."
                 )
             }
