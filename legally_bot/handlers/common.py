@@ -49,7 +49,8 @@ async def cmd_help(message: types.Message):
             "1. Type `/start` if you haven't.\n"
             "2. Provide your Full Name and Email.\n"
             "3. Select a role (Student or Professor).\n"
-            "4. Wait for Admin approval."
+            "4. Wait for Admin approval.\n"
+            "**Note:** You can still use `💬 Chat with AI` as a guest!"
         )
     elif role == "student":
         help_text += (
@@ -99,22 +100,26 @@ async def show_profile(message: types.Message):
         
         # Define role-specific abilities
         abilities = {
-            "guest": "• **Register**: Complete the registration form.\n• **Wait**: Admin must approve your requested role.",
+            "guest": "• **Chat**: Ask questions to AI about Kazakhstan law.\n• **Register**: Complete the registration form.\n• **Wait**: Admin must approve your requested role.",
             "student": (
+                "• 💬 **Chat**: Chat with AI, rate answers, and add comments.\n"
                 "• 🎓 **Solve Cases**: Get AI-generated answers for legal scenarios.\n"
                 "• 📊 **Track Progress**: Monitor your solved cases count.\n"
                 "• 📝 **Improve AI**: Suggest corrections if the AI makes a mistake."
             ),
             "professor": (
+                "• 💬 **Chat**: Chat with AI, rate answers, and add comments.\n"
                 "• 📝 **Review Queue**: Validate student-suggested corrections.\n"
                 "• ✅ **Approve/Reject**: Maintain legal accuracy in the system."
             ),
             "admin": (
+                "• 💬 **Chat**: Chat with AI, rate answers, and add comments.\n"
                 "• 👑 **System Control**: Access all Student and Professor tools.\n"
                 "• 👥 **User Management**: Approve or manually change user roles.\n"
                 "• ⚙️ **Data Ingestion**: Add new legal documents to the knowledge base."
             ),
             "developer": (
+                "• 💬 **Chat**: Chat with AI, rate answers, and add comments.\n"
                 "• 📥 **Document Ingestion**: Upload PDF/DOCX/MD files.\n"
                 "• 🔗 **Web Scraping**: Ingest content directly from URLs."
             )

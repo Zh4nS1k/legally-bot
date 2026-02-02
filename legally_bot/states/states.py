@@ -14,5 +14,9 @@ class StudentModeState(StatesGroup):
     waiting_for_rating = State()
     waiting_for_error_desc = State()
 
+class ChatState(StatesGroup):
+    chatting = State()
+    waiting_for_comment = State()
+
 class ReviewState(StatesGroup):
     viewing_queue = State()

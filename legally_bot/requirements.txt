@@ -11,3 +11,5 @@ beautifulsoup4
 requests
 markdown
 pydantic-settings
+google-generativeai
+groq

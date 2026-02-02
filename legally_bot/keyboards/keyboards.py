@@ -4,6 +4,9 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 def get_main_menu(role: str):
     builder = ReplyKeyboardBuilder()
     
+    # All roles can chat
+    builder.row(KeyboardButton(text="💬 Chat with AI"))
+
     if role == "student":
         builder.row(KeyboardButton(text="🎓 Get Case"))
         builder.row(KeyboardButton(text="📊 My Stats"))
@@ -49,3 +52,10 @@ def developer_kb():
     builder.button(text="⬅️ Back")
     builder.adjust(2)
     return builder.as_markup(resize_keyboard=True)
+
+def rating_kb(chat_id: str):
+    builder = InlineKeyboardBuilder()
+    for i in range(11):
+        builder.button(text=str(i), callback_data=f"rate_{i}_{chat_id}")
+    builder.adjust(5, 5, 1)
+    return builder.as_markup()

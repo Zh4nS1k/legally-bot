@@ -1,0 +1,101 @@
+import logging
+from aiogram import Router, types, F
+from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from legally_bot.services.rag_engine import RAGEngine
+from legally_bot.services.access_control import AccessControl
+from legally_bot.database.users_repo import UserRepository
+from legally_bot.database.feedback_repo import FeedbackRepository
+from legally_bot.keyboards.keyboards import rating_kb, get_main_menu
+from legally_bot.states.states import ChatState
+
+router = Router()
+rag_engine = RAGEngine()
+
+@router.message(F.text == "💬 Chat with AI")
+@router.message(Command("chat"))
+async def start_chat(message: types.Message, state: FSMContext):
+    await state.set_state(ChatState.chatting)
+    await message.answer("💬 You are now in Chat Mode. Ask me any question about Kazakhstan law!\nType 'exit' or click a menu button to stop.")
+
+@router.message(ChatState.chatting)
+async def handle_chat_message(message: types.Message, state: FSMContext):
+    if message.text.lower() in ["exit", "stop", "back"]:
+        await state.clear()
+        user = await UserRepository.get_user(message.from_user.id)
+        role = user.get("actual_role", user.get("role", "guest")) if user else "guest"
+        return await message.answer("Exited chat mode.", reply_markup=get_main_menu(role))
+
+    # Search and generate answer
+    await message.bot.send_chat_action(message.chat.id, "typing")
+    result = await rag_engine.search(message.text)
+    
+    answer = result.get("answer", "I'm sorry, I couldn't find an answer.")
+    chunks = result.get("chunks", [])
+    articles = result.get("articles", [])
+
+    response_text = f"🤖 **AI Answer:**\n{answer}\n\n"
+    
+    if chunks:
+        response_text += "🔍 **Top Chunks:**\n"
+        for i, chunk in enumerate(chunks, 1):
+            response_text += f"{i}. {chunk['title']}: {chunk['content'][:200]}...\n"
+        response_text += "\n"
+
+    if articles:
+        response_text += "⚖️ **Relevant Law Articles:**\n"
+        for i, art in enumerate(articles, 1):
+            response_text += f"{i}. {art['title']}: {art['content'][:200]}...\n"
+
+    # Role check for rating
+    user = await UserRepository.get_user(message.from_user.id)
+    role = user.get("actual_role", user.get("role", "guest")) if user else "guest"
+    
+    can_rate = role in ["student", "professor", "developer", "admin"]
+    
+    kb = None
+    if can_rate:
+        # Using message.message_id as a reference for feedback
+        kb = rating_kb(str(message.message_id))
+        response_text += "\n\n⭐ Please rate this answer (0-10):"
+
+    # Escape or remove problematic Markdown characters to prevent parsing errors
+    # For Telegram Markdown, certain characters like '_' or '*' can break if not closed
+    # A simple way to avoid errors while keeping some formatting:
+    
+    try:
+        await message.answer(response_text, parse_mode="Markdown", reply_markup=kb)
+    except Exception as e:
+        logging.warning(f"Markdown parsing failed, sending as plain text: {e}")
+        # Strip Markdown-like symbols as a fallback
+        plain_text = response_text.replace("**", "").replace("__", "").replace("`", "").replace("🤖 ", "").replace("🔍 ", "").replace("⚖️ ", "")
+        await message.answer(plain_text, reply_markup=kb)
+
+@router.callback_query(F.data.startswith("rate_"))
+async def process_rating(callback: types.CallbackQuery, state: FSMContext):
+    # rate_{score}_{msg_id}
+    parts = callback.data.split("_")
+    score = int(parts[1])
+    msg_id = parts[2]
+    
+    await state.update_data(rating_score=score, chat_msg_id=msg_id)
+    await callback.message.answer(f"You rated: {score}/10. Please add a comment about why (or type 'none'):")
+    await state.set_state(ChatState.waiting_for_comment)
+    await callback.answer()
+
+@router.message(ChatState.waiting_for_comment)
+async def process_comment(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    score = data.get("rating_score")
+    msg_id = data.get("chat_msg_id")
+    comment = message.text if message.text.lower() != "none" else ""
+    
+    await FeedbackRepository.log_chat_feedback(
+        user_id=message.from_user.id,
+        chat_msg_id=msg_id,
+        rating=score,
+        comment=comment
+    )
+    
+    await message.answer("Thank you for your feedback! You can continue chatting now.")
+    await state.set_state(ChatState.chatting)

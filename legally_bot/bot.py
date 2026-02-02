@@ -22,7 +22,7 @@ from legally_bot.config import settings
 from legally_bot.database.mongo_db import MongoDB
 
 # Import handlers
-from legally_bot.handlers import common, registration, developer_tools, admin, student_mode, professor_mode
+from legally_bot.handlers import common, registration, developer_tools, admin, student_mode, professor_mode, chat_handler
 
 async def main():
     logging.info("✅ Logging initialized (File + Console)")
@@ -39,6 +39,7 @@ async def main():
     # Include Routers
     dp.include_router(common.router)
     dp.include_router(registration.router)
+    dp.include_router(chat_handler.router)
     dp.include_router(student_mode.router)
     dp.include_router(professor_mode.router)
     dp.include_router(admin.router)

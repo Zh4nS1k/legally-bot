@@ -1,7 +1,10 @@
 import logging
+import json
+import requests
+import google.generativeai as genai
+from groq import Groq
 from sentence_transformers import SentenceTransformer
 from pinecone import Pinecone
-# from rank_bm25 import BM25Okapi # Optional: Keep commented if not using BM25 yet or uncomment if implementing hybrid
 from legally_bot.config import settings
 
 class RAGEngine:
@@ -12,51 +15,170 @@ class RAGEngine:
             self.encoder = SentenceTransformer('BAAI/bge-large-en-v1.5')
             self.pc = Pinecone(api_key=self.api_key)
             self.index = self.pc.Index(settings.PINECONE_INDEX_NAME)
-            logging.info("✅ RAG Engine initialized (Real Mode)")
+            
+            # Init LLM clients
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+            # We initialize the model later with specific versions to avoid 404
+            self.groq_client = None
+            if settings.GROQ_API_KEY:
+                try:
+                    self.groq_client = Groq(api_key=settings.GROQ_API_KEY)
+                except Exception as ge:
+                    logging.error(f"Failed to init Groq client: {ge}")
+            
+            logging.info("✅ RAG Engine initialized (Pinecone + Multi-LLM Fallback)")
         except Exception as e:
             logging.error(f"❌ Failed to init RAG Engine: {e}")
             self.index = None
 
+    async def _try_deepseek(self, prompt: str):
+        if not settings.OPENROUTER_API_KEY:
+            raise ValueError("OpenRouter API key not configured")
+        
+        logging.info("Attempting DeepSeek via OpenRouter...")
+        response = requests.post(
+            url="https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            data=json.dumps({
+                "model": "deepseek/deepseek-r1",
+                "messages": [{"role": "user", "content": prompt}]
+            }),
+            timeout=30
+        )
+        response.raise_for_status()
+        data = response.json()
+        if 'choices' not in data:
+            logging.error(f"OpenRouter Error Response: {data}")
+            raise ValueError(f"OpenRouter response missing 'choices': {data.get('error', 'Unknown error')}")
+        return data['choices'][0]['message']['content']
+
+    async def _try_gemini(self, prompt: str):
+        logging.info("Attempting Gemini...")
+        # Try a few variants to ensure success
+        model_names = ['gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-3-flash-preview']
+        last_err = None
+        for name in model_names:
+            try:
+                logging.info(f"Trying Gemini model: {name}")
+                model = genai.GenerativeModel(name)
+                response = model.generate_content(prompt)
+                return response.text
+            except Exception as e:
+                last_err = e
+                logging.warning(f"Gemini {name} failed: {e}")
+                continue
+        raise last_err
+
+    async def _try_groq(self, prompt: str):
+        if not self.groq_client:
+            raise ValueError("Groq API key not configured")
+        
+        logging.info("Attempting Llama 3.3 via Groq...")
+        completion = self.groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=1,
+            max_completion_tokens=1024,
+            top_p=1,
+            stream=False # Not using stream for easier fallback logic
+        )
+        return completion.choices[0].message.content
+
     async def search(self, query: str):
         if not self.index:
-            logging.warning("RAG Index not available, returning answer.")
-            return {"answer": "Search currently unavailable (DB connection failed).", "source_documents": []}
+            logging.warning("RAG Index not available.")
+            return {"answer": "Search currently unavailable.", "chunks": [], "articles": []}
 
         try:
             logging.info(f"🔎 Searching for: {query}")
             
-            # 1. Generate embedding
-            # encode() returns numpy array, convert to list for Pinecone
             vector = self.encoder.encode(query).tolist()
+            results = self.index.query(vector=vector, top_k=6, include_metadata=True)
             
-            # 2. Pinecone search
-            results = self.index.query(vector=vector, top_k=3, include_metadata=True)
-            
-            # 3. Format results
             matches = results.get('matches', [])
             source_docs = []
-            context_text = ""
+            chunks = []
+            articles = []
             
             for match in matches:
                 metadata = match.get('metadata', {})
                 text = metadata.get('text', 'No text')
                 title = metadata.get('title', 'Unknown Source')
                 score = match.get('score', 0.0)
-                
-                source_docs.append({"title": title, "content": text, "score": score})
-                context_text += f"-- Source: {title} --\n{text}\n\n"
+                doc_type = metadata.get('type', 'chunk')
 
-            # 4. Generate Answer (Here we would call an LLM like GPT/Gemini with the context)
-            # For this step, since we don't have an LLM configured in the prompt requirements yet,
-            # we will return the context as the "answer" or a placeholder saying "Here is what I found".
+                doc_info = {"title": title, "content": text, "score": score, "type": doc_type}
+                source_docs.append(doc_info)
+                
+                if doc_type == 'article' and len(articles) < 3:
+                    articles.append(doc_info)
+                elif len(chunks) < 3:
+                    chunks.append(doc_info)
             
-            answer = f"Found {len(matches)} relevant documents.\n\nHere is the retrieved context:\n{context_text[:500]}..." # Truncated for display
+            if not articles and not chunks:
+                chunks = source_docs[:3]
+                articles = source_docs[3:6]
+            elif not articles:
+                articles = source_docs[len(chunks):len(chunks)+3]
+            elif not chunks:
+                chunks = source_docs[len(articles):len(articles)+3]
+
+            context_text = "\n\n".join([f"Source: {d['title']}\nContent: {d['content']}" for d in chunks + articles])
+            
+            prompt = f"""
+            You are an AI assistant specializing in Kazakhstan Law. 
+            Use the following context to answer the user's question accurately.
+            If the context doesn't contain the answer, say you don't know based on the provided documents, but try to be helpful.
+            
+            Context:
+            {context_text}
+            
+            Question: {query}
+            
+            Answer:
+            """
+            
+            # --- Fallback Logic ---
+            answer = None
+            errors = []
+            
+            # 1. DeepSeek
+            try:
+                answer = await self._try_deepseek(prompt)
+            except Exception as e:
+                errors.append(f"DeepSeek failed: {e}")
+                logging.warning(errors[-1])
+            
+            # 2. Gemini
+            if not answer:
+                try:
+                    answer = await self._try_gemini(prompt)
+                except Exception as e:
+                    errors.append(f"Gemini failed: {e}")
+                    logging.warning(errors[-1])
+            
+            # 3. Groq
+            if not answer:
+                try:
+                    answer = await self._try_groq(prompt)
+                except Exception as e:
+                    errors.append(f"Groq failed: {e}")
+                    logging.warning(errors[-1])
+            
+            if not answer:
+                error_summary = " | ".join(errors)
+                logging.error(f"All LLM providers failed: {error_summary}")
+                return {"answer": "⚠️ All AI providers are currently unavailable. Please try again later.", "chunks": [], "articles": []}
             
             return {
                 "answer": answer,
-                "source_documents": source_docs
+                "chunks": chunks[:3],
+                "articles": articles[:3]
             }
 
         except Exception as e:
-            logging.error(f"Search failed: {e}", exc_info=True)
-            return {"answer": "Error during search.", "source_documents": []}
+            logging.error(f"Search overall failed: {e}", exc_info=True)
+            return {"answer": "Error during search.", "chunks": [], "articles": []}

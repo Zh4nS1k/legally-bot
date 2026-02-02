@@ -57,3 +57,15 @@ class FeedbackRepository:
             {"_id": ObjectId(feedback_id)},
             {"$set": {"professor_validation_status": status}}
         )
+
+    # --- RAG Chat Feedback ---
+    @classmethod
+    async def log_chat_feedback(cls, user_id: int, chat_msg_id: str, rating: int, comment: str = None):
+        data = {
+            "user_id": user_id,
+            "chat_msg_id": chat_msg_id,
+            "rating": rating,
+            "comment": comment,
+            "created_at": datetime.utcnow()
+        }
+        await db.get_db()["chat_feedback"].insert_one(data)
