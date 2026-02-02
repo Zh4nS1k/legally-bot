@@ -2,11 +2,13 @@
 class I18n:
     TRANSLATIONS = {
         "ru": {
-            "welcome": "Добро пожаловать в Legally! Давайте пройдем регистрацию.\nПожалуйста, введите ваше **Полное Имя**:",
+            "welcome": "Добро пожаловать в Legally — ваш AI Lex Эксперт по праву Казахстана!\nДавайте пройдем быструю регистрацию.\nПожалуйста, введите ваше **Полное Имя**:",
             "enter_email": "Отлично! Теперь введите ваш **Email**:",
             "select_role": "Какую роль вы хотите запросить?",
-            "reg_received": "✅ **Регистрация получена!**\n\nВы запросили роль **{role}**. Администратор рассмотрит вашу заявку в ближайшее время.",
-            "guest_info": "Сейчас у вас есть доступ 'гостя'.",
+            "reg_received": "✅ **Регистрация завершена!**\n\nДобро пожаловать. Теперь вы можете использовать чат с ИИ.",
+            "guest_info": "Ваша роль по умолчанию: Гость.",
+            "help": "❓ Помощь",
+            "help_text": "⚖️ **Legally: AI Lex Эксперт**\n━━━━━━━━━━━━━━━━━━\nЭтот бот поможет вам найти ответы на юридические вопросы по законодательству Казахстана.\n\n**Команды:**\n• `/start` - Главное меню\n• `/help` - Справка\n• `/request_role` - Запросить спец. роль (Студент/Профессор)\n• `👤 Профиль` - Ваш статус\n\nДля начала работы просто нажмите `💬 Чат с ИИ`!",
             "main_menu": "Главное меню:",
             "chat_with_ai": "💬 Чат с ИИ",
             "get_case": "🎓 Получить кейс",
@@ -32,11 +34,13 @@ class I18n:
             "role_rejected": "❌ Ваш запрос на роль **{role}** был отклонен.",
         },
         "en": {
-            "welcome": "Welcome to Legally! Let's get you registered.\nPlease enter your **Full Name**:",
+            "welcome": "Welcome to Legally — your AI Lex Expert on Kazakhstan Law!\nLet's do a quick registration.\nPlease enter your **Full Name**:",
             "enter_email": "Great! Now please enter your **Email Address**:",
             "select_role": "Which role would you like to apply for?",
-            "reg_received": "✅ **Registration Received!**\n\nYou requested the **{role}** role. An admin will review it shortly.",
-            "guest_info": "You currently have 'guest' access.",
+            "reg_received": "✅ **Registration Completed!**\n\nWelcome aboard. You can now use the AI chat.",
+            "guest_info": "Your default role is: Guest.",
+            "help": "❓ Help",
+            "help_text": "⚖️ **Legally: AI Lex Expert**\n━━━━━━━━━━━━━━━━━━\nThis bot helps you find answers to legal questions about Kazakhstan law.\n\n**Commands:**\n• `/start` - Main menu\n• `/help` - Help guide\n• `/request_role` - Request special role (Student/Professor)\n• `👤 Profile` - Your status\n\nTo start, just click `💬 Chat with AI`!",
             "main_menu": "Main Menu:",
             "chat_with_ai": "💬 Chat with AI",
             "get_case": "🎓 Get Case",

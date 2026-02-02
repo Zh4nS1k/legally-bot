@@ -81,6 +81,21 @@ async def process_language(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
 
 @router.message(F.text.in_(["👤 Profile", "👤 Профиль"]))
+async def cmd_profile_btn(message: types.Message):
+    await cmd_profile(message)
+
+@router.message(F.text.in_(["❓ Help", "❓ Помощь"]))
+async def cmd_help_btn(message: types.Message):
+    await cmd_help(message)
+
+@router.message(Command("help"))
+async def cmd_help(message: types.Message):
+    logging.info(f"User {message.from_user.id} called /help")
+    user = await UserRepository.get_user(message.from_user.id)
+    lang = user.get("language", "ru") if user else "ru"
+    
+    await message.answer(I18n.t("help_text", lang), parse_mode="Markdown")
+
 async def cmd_profile(message: types.Message):
     user = await UserRepository.get_user(message.from_user.id)
     if not user:
@@ -229,6 +244,22 @@ async def cmd_help(message: types.Message):
     help_text = h["header"] + h.get(role, "")
     
     await message.answer(help_text, parse_mode="Markdown")
+
+@router.message(F.text.in_(["👤 Profile", "👤 Профиль"]))
+async def cmd_profile_btn(message: types.Message):
+    await show_profile(message)
+
+@router.message(F.text.in_(["❓ Help", "❓ Помощь"]))
+async def cmd_help_btn(message: types.Message):
+    await cmd_help(message)
+
+@router.message(Command("help"))
+async def cmd_help(message: types.Message):
+    logging.info(f"User {message.from_user.id} called /help")
+    user = await UserRepository.get_user(message.from_user.id)
+    lang = user.get("language", "ru") if user else "ru"
+    
+    await message.answer(I18n.t("help_text", lang), parse_mode="Markdown")
 
 @router.message(F.text.in_(["👤 Profile", "👤 Профиль"]))
 async def show_profile(message: types.Message):

@@ -19,7 +19,7 @@ def get_main_menu(role: str, lang: str = "ru"):
         builder.row(KeyboardButton(text=I18n.t("review_corrections", lang)))
         builder.row(KeyboardButton(text=I18n.t("manage_users", lang)), KeyboardButton(text=I18n.t("dev_tools", lang)))
     
-    builder.row(KeyboardButton(text=I18n.t("profile", lang)))
+    builder.row(KeyboardButton(text=I18n.t("profile", lang)), KeyboardButton(text=I18n.t("help", lang)))
     return builder.as_markup(resize_keyboard=True)
 
 def language_selection_kb():
