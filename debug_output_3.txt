@@ -1,0 +1,32 @@
+Testing: https://adilet.zan.kz/rus/docs/K1400000233
+Status: 404
+Fail.
+
+Testing: https://adilet.zan.kz/rus/docs/K1400000233_
+Status: 404
+Fail.
+
+Testing: https://adilet.zan.kz/rus/docs/K1400000235
+Status: 200
+SUCCESS! Found valid URL.
+
+Testing: https://adilet.zan.kz/rus/docs/K1400000235_
+Status: 404
+Fail.
+
+Testing: https://adilet.zan.kz/rus/docs/K1400000234
+Status: 200
+SUCCESS! Found valid URL.
+
+Testing: https://adilet.zan.kz/rus/docs/K1400000236
+Status: 404
+Fail.
+
+Testing: https://adilet.zan.kz/rus/docs/V1400000235
+Status: 404
+Fail.
+
+Testing: https://adilet.zan.kz/rus/docs/V1400000233
+Status: 404
+Fail.
+

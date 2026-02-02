@@ -1,0 +1,24 @@
+--- Testing Home: https://adilet.zan.kz/rus ---
+Status: 200
+Final URL: https://adilet.zan.kz/rus
+History: []
+Success! Length: 63884
+
+--- Testing Constitution: https://adilet.zan.kz/rus/docs/K950001000_ ---
+Status: 200
+Final URL: https://adilet.zan.kz/rus/docs/K950001000_
+History: []
+Success! Length: 190013
+
+--- Testing Admin Code: https://adilet.zan.kz/rus/docs/K1400000233 ---
+Status: 404
+Final URL: https://adilet.zan.kz/rus/docs/K1400000233
+History: []
+Fail. Content preview: <!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/><![endif]-->
+		<title>ИПС &quot;Әділет&quot;</title>
+		<meta name
+

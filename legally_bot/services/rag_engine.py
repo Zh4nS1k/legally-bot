@@ -135,16 +135,28 @@ class RAGEngine:
                     elif len(articles) < num_articles:
                         articles.append(doc_info)
 
-            context_text = "\n\n".join([f"Source: {d['title']}\nContent: {d['content']}" for d in chunks + articles])
+            context_text = ""
+            for d in chunks + articles:
+                context_text += f"---\nSource: {d.get('title', 'Unknown')}\n"
+                context_text += f"Article: {d.get('article', 'N/A')}\n"
+                context_text += f"URL: {d.get('url', 'N/A')}\n"
+                context_text += f"Content: {d['content']}\n"
             
             lang_instruction = "Respond in Russian." if lang == "ru" else "Respond in English."
             
             prompt = f"""
-            You are an AI assistant specializing in Kazakhstan Law. 
-            Use the following context to answer the user's question accurately.
-            {lang_instruction}
-            If the context doesn't contain the answer, say you don't know based on the provided documents, but try to be helpful.
+            You are an AI assistant specializing in Kazakhstan Law "Legally".
             
+            STRICT SYSTEM INSTRUCTIONS:
+            1. Use ONLY the provided Context to answer.
+            2. You MUST cite the specific "Source" and "Article" number for every claim.
+            3. If the context does not contain the answer, explicitly state that you cannot find the answer in the provided documents.
+            4. DO NOT hallucinate sources or articles.
+            5. {lang_instruction}
+
+            Answer Format:
+            "According to Article X of [Source Name]..."
+
             Context:
             {context_text}
             

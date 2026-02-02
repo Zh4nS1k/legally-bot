@@ -1,0 +1,46 @@
+Testing URL: https://adilet.zan.kz/rus/docs/K1400000233
+
+--- Strategy: Mozilla (Standard) ---
+Status: 404
+Final URL: https://adilet.zan.kz/rus/docs/K1400000233
+Fail. Content preview: <!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/><![endif]-->
+		<title>ИПС &quot;Әділет&quot;</title>
+		<meta name
+
+--- Strategy: Googlebot ---
+Status: 404
+Final URL: https://adilet.zan.kz/rus/docs/K1400000233
+Fail. Content preview: <!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/><![endif]-->
+		<title>ИПС &quot;Әділет&quot;</title>
+		<meta name
+
+--- Strategy: No Headers ---
+Status: 404
+Final URL: https://adilet.zan.kz/rus/docs/K1400000233
+Fail. Content preview: <!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/><![endif]-->
+		<title>ИПС &quot;Әділет&quot;</title>
+		<meta name
+
+--- Strategy: Full Browser Headers ---
+Status: 404
+Final URL: https://adilet.zan.kz/rus/docs/K1400000233
+Fail. Content preview: <!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/><![endif]-->
+		<title>ИПС &quot;Әділет&quot;</title>
+		<meta name
+
