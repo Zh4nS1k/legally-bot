@@ -14,7 +14,7 @@ from legally_bot.services.i18n import I18n
 router = Router()
 rag_engine = RAGEngine()
 
-@router.message(F.text.in_(["💬 Chat with AI", "💬 Чат с ИИ"]))
+@router.message(F.text.in_(["💬 Chat with AI", "💬 Чат с ИИ", "💬 AI-мен сөйлесу"]))
 @router.message(Command("chat"))
 async def start_chat(message: types.Message, state: FSMContext):
     user = await UsersRepository.get_user(message.from_user.id)
@@ -96,13 +96,33 @@ async def handle_chat_message(message: types.Message, state: FSMContext):
     # For Telegram Markdown, certain characters like '_' or '*' can break if not closed
     # A simple way to avoid errors while keeping some formatting:
     
-    try:
-        await message.answer(response_text, parse_mode="Markdown", reply_markup=kb)
-    except Exception as e:
-        logging.warning(f"Markdown parsing failed, sending as plain text: {e}")
-        # Strip Markdown-like symbols as a fallback
-        plain_text = response_text.replace("**", "").replace("__", "").replace("`", "").replace("🤖 ", "").replace("🔍 ", "").replace("⚖️ ", "")
-        await message.answer(plain_text, reply_markup=kb)
+    # Telegram Message Length Limit
+    MAX_LENGTH = 4090
+    
+    parts = []
+    while len(response_text) > 0:
+        if len(response_text) > MAX_LENGTH:
+            # Try to split at nearest newline
+            split_at = response_text[:MAX_LENGTH].rfind('\n')
+            if split_at == -1:
+                split_at = MAX_LENGTH
+            
+            parts.append(response_text[:split_at])
+            response_text = response_text[split_at:]
+        else:
+            parts.append(response_text)
+            response_text = ""
+
+    for i, part in enumerate(parts):
+        is_last = (i == len(parts) - 1)
+        reply_markup = kb if is_last else None
+        
+        try:
+            await message.answer(part, parse_mode="Markdown", reply_markup=reply_markup)
+        except Exception as e:
+            logging.warning(f"Markdown parsing failed, sending as plain text: {e}")
+            plain_text = part.replace("**", "").replace("__", "").replace("`", "").replace("🤖 ", "").replace("🔍 ", "").replace("⚖️ ", "")
+            await message.answer(plain_text, reply_markup=reply_markup)
 
 @router.callback_query(F.data.startswith("rate_"))
 async def process_rating(callback: types.CallbackQuery, state: FSMContext):

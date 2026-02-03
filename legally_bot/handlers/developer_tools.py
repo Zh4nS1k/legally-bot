@@ -35,7 +35,12 @@ async def start_upload(message: types.Message, state: FSMContext):
     user = await UsersRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
 
-    msg = "Send me a PDF, DOCX, MD, or TXT file to ingest." if lang == "en" else "Отправьте мне файл PDF, DOCX, MD или TXT для загрузки."
+    if lang == "en":
+        msg = "Send me a PDF, DOCX, MD, or TXT file to ingest."
+    elif lang == "kk":
+        msg = "Маған жүктеу үшін PDF, DOCX, MD немесе TXT файлын жіберіңіз."
+    else:
+        msg = "Отправьте мне файл PDF, DOCX, MD или TXT для загрузки."
     await message.answer(msg)
     await state.set_state(IngestionState.waiting_for_file)
 
@@ -68,12 +73,50 @@ async def handle_document(message: types.Message, state: FSMContext, bot: Bot):
         file_type = "txt"
     
     if file_type:
-        count = await ingest_service.ingest_file(file_content, file_name, file_type)
-        msg = f"✅ Successfully indexed {count} chunks from {file_name}." if lang == "en" else f"✅ Успешно проиндексировано {count} фрагментов из {file_name}."
+        if lang == "en":
+            progress_text = "⏳ Ingesting..."
+        elif lang == "kk":
+            progress_text = "⏳ Жүктелуде..."
+        else:
+            progress_text = "⏳ Загрузка..."
+        
+        progress_msg = await message.answer(progress_text)
+        last_percent = 0
+
+        async def progress_callback(processed, total):
+            nonlocal last_percent
+            if total == 0: return
+            percent = int((processed / total) * 100)
+            if percent - last_percent >= 20 or percent == 100:
+                new_text = f"{progress_text} {percent}%"
+                try:
+                    await progress_msg.edit_text(new_text)
+                    last_percent = percent
+                except Exception:
+                    pass
+
+        count = await ingest_service.ingest_file(file_content, file_name, file_type, progress_callback=progress_callback)
+        
+        try:
+            await progress_msg.delete()
+        except Exception:
+            pass
+
+        if lang == "en":
+            msg = f"✅ Successfully indexed {count} chunks from {file_name}."
+        elif lang == "kk":
+            msg = f"✅ {file_name} файлынан {count} фрагмент сәтті индекстелді."
+        else:
+            msg = f"✅ Успешно проиндексировано {count} фрагментов из {file_name}."
         await message.answer(msg)
         await state.clear()
     else:
-        msg = "❌ Unsupported file format. Please send PDF, DOCX, MD, or TXT." if lang == "en" else "❌ Неподдерживаемый формат файла. Пожалуйста, отправьте PDF, DOCX, MD или TXT."
+        if lang == "en":
+            msg = "❌ Unsupported file format. Please send PDF, DOCX, MD, or TXT."
+        elif lang == "kk":
+            msg = "❌ Қолдау көрсетілмейтін файл пішімі. PDF, DOCX, MD немесе TXT жіберіңіз."
+        else:
+            msg = "❌ Неподдерживаемый формат файла. Пожалуйста, отправьте PDF, DOCX, MD или TXT."
         await message.answer(msg)
 
 @router.message(Command("ingest_link"))
@@ -85,7 +128,12 @@ async def start_link_ingest(message: types.Message, state: FSMContext):
     user = await UsersRepository.get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
 
-    msg = "Please send me the URL you want to ingest." if lang == "en" else "Пожалуйста, отправьте мне URL, который вы хотите загрузить."
+    if lang == "en":
+        msg = "Please send me the URL you want to ingest."
+    elif lang == "kk":
+        msg = "Жүктегіңіз келетін URL мекенжайын жіберіңіз."
+    else:
+        msg = "Пожалуйста, отправьте мне URL, который вы хотите загрузить."
     await message.answer(msg)
     await state.set_state(IngestionState.waiting_for_url)
 
@@ -99,7 +147,41 @@ async def handle_link(message: types.Message, state: FSMContext):
     
     url = message.text
     logging.info(f"Developer {message.from_user.id} started ingestion of URL {url}")
-    count = await ingest_service.ingest_url(url)
-    msg = f"✅ Successfully indexed {count} chunks from {url}." if lang == "en" else f"✅ Успешно проиндексировано {count} фрагментов из {url}."
+    
+    if lang == "en":
+        progress_text = "⏳ Ingesting..."
+    elif lang == "kk":
+        progress_text = "⏳ Жүктелуде..."
+    else:
+        progress_text = "⏳ Загрузка..."
+    
+    progress_msg = await message.answer(progress_text)
+    last_percent = 0
+
+    async def progress_callback(processed, total):
+        nonlocal last_percent
+        if total == 0: return
+        percent = int((processed / total) * 100)
+        if percent - last_percent >= 20 or percent == 100:
+            new_text = f"{progress_text} {percent}%"
+            try:
+                await progress_msg.edit_text(new_text)
+                last_percent = percent
+            except Exception:
+                pass
+
+    count = await ingest_service.ingest_url(url, progress_callback=progress_callback)
+    
+    try:
+        await progress_msg.delete()
+    except Exception:
+        pass
+
+    if lang == "en":
+        msg = f"✅ Successfully indexed {count} chunks from {url}."
+    elif lang == "kk":
+        msg = f"✅ {url} мекенжайынан {count} фрагмент сәтті индекстелді."
+    else:
+        msg = f"✅ Успешно проиндексировано {count} фрагментов из {url}."
     await message.answer(msg)
     await state.clear()

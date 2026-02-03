@@ -173,6 +173,33 @@ class RAGEngine:
             chunks = expanded_results['chunks']
             articles = expanded_results['articles']
 
+            # Determine language instruction
+            lang_instruction = "Respond in Russian."
+            if lang == "en":
+                lang_instruction = "Respond in English."
+            elif lang == "kk":
+                lang_instruction = "Respond in Kazakh. Use formal Kazakh legal terminology."
+
+            logging.info(f"Target Language: {lang}")
+
+            # 0. Chit-chat check
+            # We do a quick check if the query is just "Hello", "How are you", etc.
+            # To save tokens, we can use a small heuristic or just ask LLM with a tiny prompt.
+            # But robust way is:
+            if self._is_general_chat(query):
+                logging.info("💬 General chat detected. Bypassing RAG.")
+                simple_prompt = f"User says: {query}\n\nReply helpfully and politely. {lang_instruction} If they ask for legal advice, mention you can help with Kazakhstan law."
+                simple_answer = await self._generate_with_fallback(simple_prompt)
+                return {
+                    "answer": simple_answer,
+                    "chunks": [],
+                    "articles": []
+                }
+
+            # 1. Extraction (Retrieval)
+            # Already done above (Vector Search + Re-ranking + Expansion)
+            # chunks and articles are ready.
+
             context_text = ""
             for d in chunks + articles:
                 context_text += f"---\nSource: {d.get('title', 'Unknown')}\n"
@@ -180,27 +207,30 @@ class RAGEngine:
                 context_text += f"URL: {d.get('url', 'N/A')}\n"
                 context_text += f"Content: {d['content']}\n"
             
-            lang_instruction = "Respond in Russian." if lang == "ru" else "Respond in English."
-            
-            # Reasoning Chain (Markov-ish)
-            # Step 1: Draft
+            # 2. Generation 1 (Draft / Reasoning)
             draft_prompt = f"""
-            You are an AI assistant specialized in Kazakhstan Law.
-            Strictly analyze the provided context to answer the user's question.
+            Role: Expert Legal Analyst for Kazakhstan Law.
+            Task: Analyze the context and draft a comprehensive answer to the question.
             
             Context:
             {context_text}
             
             Question: {query}
             
-            Draft a preliminary answer based ONLY on the context. Cite sources.
-            """
+            Instructions:
+            - Think step-by-step.
+            - Identify relevant articles from context.
+            - specific legal norms.
+            - {lang_instruction}
             
+            Draft Answer:
+            """
             draft_answer = await self._generate_with_fallback(draft_prompt)
             
-            # Step 2: Refine (Transition)
-            final_prompt = f"""
-            You are a Senior Legal Editor. Review the draft answer against the context.
+            # 3. Generation 2 (Refinement / Critique)
+            refine_prompt = f"""
+            Role: Senior Chief Editor.
+            Task: Critique and refine the Draft Answer.
             
             Context:
             {context_text}
@@ -211,15 +241,32 @@ class RAGEngine:
             User Question: {query}
             
             Instructions:
-            1. Verify all citations exist in the context.
-            2. Remove any hallucinated details.
-            3. Ensure the tone is professional.
-            4. {lang_instruction}
+            - Verify accuracy against Context.
+            - Remove hallucinations.
+            - Improve clarity and flow.
+            - Ensure tone is professional and empathetic.
+            - {lang_instruction}
             
-            Final Answer:
+            Refined Answer:
             """
+            refined_answer = await self._generate_with_fallback(refine_prompt)
+
+            # 4. Extraction (Final Formatting / Citations)
+            # Extract key references into a structured list to ensure user sees them clearly
+            extract_prompt = f"""
+            Task: Extract metadata and formatting from the Refined Answer.
             
-            final_answer = await self._generate_with_fallback(final_prompt)
+            Refined Answer:
+            {refined_answer}
+            
+            Instructions:
+            - Return the Refined Answer exactly as is, but ensure that at the bottom, there is a clear list of "Used Sources" if applicable.
+            - If sources are already listed, just return the text.
+            - {lang_instruction}
+            
+            Final Output:
+            """
+            final_answer = await self._generate_with_fallback(extract_prompt)
             
             return {
                 "answer": final_answer,
@@ -230,6 +277,26 @@ class RAGEngine:
         except Exception as e:
             logging.error(f"Search overall failed: {e}", exc_info=True)
             return {"answer": "Error during search.", "chunks": [], "articles": []}
+
+    def _is_general_chat(self, query: str) -> bool:
+        """
+        Simple heuristic to detect non-legal, general chit-chat.
+        """
+        greetings = [
+            "hello", "hi", "hey", "start", "привет", "здравствуйте", "салем", "сәлем", 
+            "how are you", "как дела", "who are you", "кто ты", "ты кто"
+        ]
+        
+        # Check for short, common greetings
+        q_lower = query.lower().strip().replace("?", "").replace("!", "")
+        if q_lower in greetings:
+            return True
+        
+        # Check length - very short queries are rarely complex legal questions
+        if len(query.split()) < 2 and q_lower not in ["law", "закон", "заң"]:
+            return True
+            
+        return False
 
     async def _expand_context(self, chunks: list, articles: list):
         """

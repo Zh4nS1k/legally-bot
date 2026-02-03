@@ -19,7 +19,7 @@ class IngestionService:
             logging.error(f"❌ Failed to init Ingestion Service: {e}")
             self.index = None
 
-    async def ingest_file(self, file_content: BytesIO, file_name: str, file_type: str):
+    async def ingest_file(self, file_content: BytesIO, file_name: str, file_type: str, progress_callback=None):
         """
         Ingests a file with semantic chunking.
         Treats file content as a single 'Article' or attempts to split if structure is found.
@@ -50,10 +50,10 @@ class IngestionService:
         # Files usually don't have perfect Article structure like strict laws, 
         # so we default to a simpler chunking or try to apply the same logic if it looks like a law.
         chunks_data = self._semantic_chunking(text, source_title=file_name, source_url="Uploaded File")
-        await self._upload_to_pinecone(chunks_data)
+        await self._upload_to_pinecone(chunks_data, progress_callback)
         return len(chunks_data)
 
-    async def ingest_url(self, url: str):
+    async def ingest_url(self, url: str, progress_callback=None):
         """
         Scrapes URL using Trafilatura (via custom request), cleans noise, extracts metadata, 
         chunks by 'Article', and uploads.
@@ -103,7 +103,7 @@ class IngestionService:
             logging.warning("No valid chunks created.")
             return 0
             
-        await self._upload_to_pinecone(chunks_data)
+        await self._upload_to_pinecone(chunks_data, progress_callback)
         return len(chunks_data)
 
     def _clean_text(self, text: str) -> str:
@@ -206,7 +206,7 @@ class IngestionService:
         splitter = RecursiveCharacterTextSplitter(chunk_size=max_size, chunk_overlap=overlap)
         return splitter.split_text(text)
 
-    async def _upload_to_pinecone(self, chunks_data: list):
+    async def _upload_to_pinecone(self, chunks_data: list, progress_callback=None):
         if not self.index:
             logging.error("Pinecone index not available.")
             return
@@ -261,4 +261,11 @@ class IngestionService:
                 logging.info(f"   Upserted batch {i//batch_size + 1}")
             except Exception as e:
                 logging.error(f"   ❌ Batch upload failed: {e}")
+
+            if progress_callback:
+                processed_count = min(i + batch_size, len(vectors))
+                try:
+                    await progress_callback(processed_count, len(vectors))
+                except Exception as e:
+                    logging.warning(f"Failed to update progress: {e}")
 

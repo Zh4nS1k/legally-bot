@@ -1,0 +1,23 @@
+aiogram>=3.0.0
+motor>=3.3.0
+pinecone>=3.0.0
+sentence-transformers>=2.2.0
+python-dotenv>=1.0.0
+rank_bm25
+langchain-text-splitters
+pypdf
+python-docx
+beautifulsoup4
+requests
+markdown
+pydantic-settings
+google-generativeai
+groq
+aiosmtplib
+trafilatura
+
+# RAG 3.0 (Batch & Infra)
+pandas
+openpyxl
+chromadb
+tenacity

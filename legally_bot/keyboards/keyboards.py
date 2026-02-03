@@ -26,6 +26,7 @@ def language_selection_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text="Русский 🇷🇺", callback_data="lang_ru")
     builder.button(text="English 🇺🇸", callback_data="lang_en")
+    builder.button(text="Қазақша 🇰🇿", callback_data="lang_kk")
     builder.adjust(2)
     return builder.as_markup()
 
@@ -48,7 +49,8 @@ def feedback_kb(case_id: str, response_id: str, lang: str = "ru"):
     
     labels = {
         "ru": ["✅ Все верно", "⚠️ Логическая ошибка", "❌ Неверная статья"],
-        "en": ["✅ Everything Correct", "⚠️ Logic Error", "❌ Wrong Article"]
+        "en": ["✅ Everything Correct", "⚠️ Logic Error", "❌ Wrong Article"],
+        "kk": ["✅ Бәрі дұрыс", "⚠️ Логикалық қате", "❌ Қате бап"]
     }
     l = labels.get(lang, labels["ru"])
 
