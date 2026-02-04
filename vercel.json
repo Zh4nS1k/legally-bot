@@ -1,15 +1,8 @@
-am {
-  "version": 2,
-  "builds": [
+{
+  "rewrites": [
     {
-      "src": "legally_bot/bot.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "legally_bot/bot.py"
+      "source": "/(.*)",
+      "destination": "legally_bot/bot.py"
     }
   ]
 }
