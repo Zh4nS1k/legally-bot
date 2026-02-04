@@ -45,3 +45,4 @@ env/
 # Project specific
 db_data/
 logs/
+vercel.json
